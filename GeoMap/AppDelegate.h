@@ -8,8 +8,12 @@
 
 #import <UIKit/UIKit.h>
 
+@class WYRootViewController;
+
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
+
+@property (strong, nonatomic) WYRootViewController *rootViewController;
 
 @end
