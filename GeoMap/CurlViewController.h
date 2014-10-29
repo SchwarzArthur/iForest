@@ -29,6 +29,8 @@ typedef enum {
 @property (nonatomic, strong) IBOutlet UILabel *strandardMap;
 @property (nonatomic, strong) IBOutlet UILabel *googleMap;
 
+@property (nonatomic, strong) IBOutlet UIButton *dismissButton;
+
 @property (assign, nonatomic) BOOL useClustering;
 
 @property (strong, nonatomic) IBOutlet UISwitch *onOffCluster;

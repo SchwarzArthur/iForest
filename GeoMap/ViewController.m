@@ -26,7 +26,7 @@
 #import "QTree.h"
 #import "QCluster.h"
 #import "ClusterAnnotationView.h"
-#import "CSNotificationView.h"
+#import "GoogleWearAlertObjc.h"
 #import "MZLoadingCircle.h"
 #import "SVBlurView.h"
 #import "HATransparentView.h"
@@ -57,6 +57,15 @@
 #import "OtherLayerAnnotation.h"
 #import "GSIndeterminateProgressView.h"
 #import "AboutViewController.h"
+//---------------
+#import "GHWalkThroughView.h"
+
+static NSString * const sampleDesc1 = @"Application แผนที่และฐานข้อมูล\nทรัพยากรและที่ดินป่าไม้ในมิติของป่าสงวนแห่งชาติ\nในความรับผิดชอบของกรมป่าไม้\n\nIntroduction ➠";
+static NSString * const sampleDesc2 = @"เริ่มต้นใช้งานง่ายๆ ด้วยปุ่ม Menu ด้านบนซ้าย\nที่รวมทุก Functions เอาไว้";
+static NSString * const sampleDesc3 = @"เพิ่มชั้นข้อมูลป่าสงวนแห่งชาติ พื้นที่อนุรักษ์ และอื่นๆ\nเพื่อแสดงบนแผนที่";
+static NSString * const sampleDesc4 = @"แสดง Current Location และปักหมุด\nเพื่อบันทึกและแชร์สถานที่ของคุณได้";
+static NSString * const sampleDesc5 = @"• Search Place : ค้นหาสถานที่ต่างๆ จาก ชื่อ/ค่าพิกัด \n• Route Direction : ระบบแสดงเส้นทางไปยังจุดหมาย\n• Digitize : สร้างพื้นที่และเส้นด้วยตนเอง\n• List & Search : แสดง/ค้นหารายชื่อป่าสงวนแห่งชาติ";
+//---------------
 
 static inline CLLocationCoordinate2D CLLocationCoordinateFromCoordinates(NSArray *coordinates) {
     NSCParameterAssert(coordinates && [coordinates count] == 2);
@@ -83,7 +92,7 @@ static inline CLLocationCoordinate2D CLLocationCoordinateFromCoordinates(NSArray
 
 static inline CLLocationCoordinate2D * CLLocationCoordinatesFromCoordinatePairs(NSArray *coordinatePairs) {
     NSUInteger count = [coordinatePairs count];
-    CLLocationCoordinate2D *locationCoordinates = malloc(sizeof(CLLocationCoordinate2D) * count);
+    CLLocationCoordinate2D *locationCoordinates = (CLLocationCoordinate2D *)malloc(sizeof(CLLocationCoordinate2D) * count);
     for (NSUInteger idx = 0; idx < count; idx++) {
         CLLocationCoordinate2D coordinate = CLLocationCoordinateFromCoordinates(coordinatePairs[idx]);
         locationCoordinates[idx] = coordinate;
@@ -98,7 +107,7 @@ const static CGFloat kJVFieldHMargin = 10.0f;
 const static CGFloat kJVFieldFontSize = 16.0f;
 const static CGFloat kJVFieldFloatingLabelFontSize = 11.0f;
 
-@interface ViewController ()<MCSwipeTableViewCellDelegate,CurlViewControllerDelegate,LeveyPopListViewDelegate,UITextFieldDelegate,WYPopoverControllerDelegate,GuideWebViewControllerDelegate>
+@interface ViewController ()<MCSwipeTableViewCellDelegate,CurlViewControllerDelegate,LeveyPopListViewDelegate,UITextFieldDelegate,WYPopoverControllerDelegate,GuideWebViewControllerDelegate,GHWalkThroughViewDataSource>
 {
     __weak IBOutlet MKMapView *_mapView;
     __weak IBOutlet UIView *_containerView;
@@ -163,7 +172,9 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 11.0f;
  
     GSIndeterminateProgressView *_progressView;
 }
-
+@property (nonatomic, strong) GHWalkThroughView* ghView ;
+@property (nonatomic, strong) NSArray* descStrings;
+@property (nonatomic, strong) UILabel* welcomeLabel;
 @property (nonatomic, strong) MCSwipeTableViewCell *cellToDelete;
 
 -(void)drawCircleWithCoordinate:(CLLocationCoordinate2D)coord;
@@ -272,9 +283,7 @@ CLLocationCoordinate2D circleCoordinate;
                 [self setTitle:@"Map"];//---[self hideLoadingMode];
                 [blurView removeFromSuperview];
                 
-                [CSNotificationView showInViewController:self
-                                                   style:CSNotificationViewStyleSuccess
-                                                 message:@"Search Complete"];
+                [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
             }
         }
     } failure:nil];
@@ -372,13 +381,6 @@ CLLocationCoordinate2D circleCoordinate;
     
     _urlConnect = urlDelegateLayer;
     [self layer];
-    
-    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"พื้นที่เป้าหมาย"
-                                                      message:@"เลือกพื้นที่ป่าสงวนแห่งชาติที่ต้องการ"
-                                                     delegate:self
-                                            cancelButtonTitle:@"Cancel"
-                                            otherButtonTitles:@"Next", nil];
-    [message show];
 }
 /*-(void)setUrlDelegateLayer:(NSString *)urlDelegateLayer {
 
@@ -451,9 +453,61 @@ CLLocationCoordinate2D circleCoordinate;
     [self refresh];
 }
 
+#pragma mark - GHDataSource
+
+-(NSInteger) numberOfPages {
+    return 5;
+}
+
+- (void) configurePage:(GHWalkThroughPageCell *)cell atIndex:(NSInteger)index
+{
+   // cell.title = [NSString stringWithFormat:@"This is page %d", index+1];
+    cell.titleImage = [UIImage imageNamed:[NSString stringWithFormat:@"IN500w%d", index+1]];
+    cell.desc = [self.descStrings objectAtIndex:index];
+    
+        if (index == 0) {
+            cell.title = @"iForest";
+        } else if (index == 1) {
+            cell.title = @"Main Menu";
+        } else if (index == 2) {
+            cell.title = @"Layers & Data";
+        } else if (index == 3) {
+            cell.title = @"Pins & Current Location";
+        } else if (index == 4) {
+            cell.title = @"Functions";
+        }
+}
+
+/*- (UIImage*)bgImageforPage:(NSInteger)index
+{
+    NSString* imageName =[NSString stringWithFormat:@"bg_0%d.jpg", index+1];
+    UIImage* image = [UIImage imageNamed:imageName];
+    return image;
+}*/
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    _ghView = [[GHWalkThroughView alloc] initWithFrame:self.navigationController.view.bounds];
+    [_ghView setDataSource:self];
+    [_ghView setWalkThroughDirection:GHWalkThroughViewDirectionVertical];
+    _welcomeLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 300, 50)];
+    _welcomeLabel.text = @"Welcome";
+    _welcomeLabel.font = [UIFont fontWithName:@"Avenir Next" size:30];
+    _welcomeLabel.textColor = [UIColor whiteColor];
+    _welcomeLabel.textAlignment = NSTextAlignmentCenter;
+    
+    self.descStrings = [NSArray arrayWithObjects:sampleDesc1,sampleDesc2, sampleDesc3, sampleDesc4, sampleDesc5, nil];
+    
+    self.ghView.isfixedBackground = YES;
+    self.ghView.bgImage = [UIImage imageNamed:@"INBG1"];
+    //self.ghView.floatingHeaderView = nil;
+    [_ghView setFloatingHeaderView:self.welcomeLabel];
+    [self.ghView setWalkThroughDirection:GHWalkThroughViewDirectionHorizontal];
+    
+    [self.ghView showInView:self.navigationController.view animateDuration:0.3];
+    
     
     blurView = [[SVBlurView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     
@@ -705,17 +759,26 @@ CLLocationCoordinate2D circleCoordinate;
     
     self.navigationItem.rightBarButtonItems = buttonArray;*/
 
-    if([[[UIDevice currentDevice]systemVersion]floatValue] >= 8.0) {
-       
-        _locationManager = [[CLLocationManager alloc] init];
-        [_locationManager setDelegate:self];
-        [_locationManager startUpdatingLocation];
-        
-        [_locationManager requestWhenInUseAuthorization];
-    }
+ 
+    self.locationManager = [[CLLocationManager alloc] init];
+    self.locationManager.delegate = self;
     
-   // _mapView.showsUserLocation = YES;
+    if([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        //[self.locationManager requestWhenInUseAuthorization];
+        [self.locationManager requestAlwaysAuthorization];
+        [self.locationManager startUpdatingLocation];
+    }
     [_mapView setShowsUserLocation:YES];
+    [_mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
+     //_mapView.showsPointsOfInterest = YES;
+    
+    MKCoordinateRegion region = { { 0.0, 0.0 }, { 0.0, 0.0 } };
+    region.center.latitude = self.locationManager.location.coordinate.latitude;
+    region.center.longitude = self.locationManager.location.coordinate.longitude;
+    region.span.latitudeDelta = 0.0187f;
+    region.span.longitudeDelta = 0.0137f;
+    [_mapView setRegion:region animated:YES];
+ 
   
     MKUserTrackingBarButtonItem *buttonItem =
     [[MKUserTrackingBarButtonItem alloc] initWithMapView:_mapView];
@@ -780,10 +843,20 @@ CLLocationCoordinate2D circleCoordinate;
     
     [self updateLocations];
     [self warning];
-    [self arertAddLayer];
-    [self setMapRegion];
+    //----[self arertAddLayer];
+    //----[self setMapRegion];
     [self mainmenu];
 }
+
+/*-(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations {
+    MKCoordinateRegion region = { { 0.0, 0.0 }, { 0.0, 0.0 } };
+    region.center.latitude = self.locationManager.location.coordinate.latitude;
+    region.center.longitude = self.locationManager.location.coordinate.longitude;
+    region.span.latitudeDelta = 0.0187f;
+    region.span.longitudeDelta = 0.0137f;
+    [_mapView setRegion:region animated:YES];
+}*/
+
 
 -(void)mainmenu {
 
@@ -865,7 +938,7 @@ CLLocationCoordinate2D circleCoordinate;
 -(void)show {
     [sideMenu toggleMenu];
     [self closeTransparentView];
- 
+    [self leveyPopListViewDidCancel];
 }
 
 #pragma -mark btSimpleSideMenuDelegate
@@ -896,8 +969,8 @@ CLLocationCoordinate2D circleCoordinate;
 -(void)setMapRegion {
 
     MKCoordinateRegion region = { {0.0, 0.0 }, { 0.0, 0.0 } };
-    region.center.latitude = 13.13;
-    region.center.longitude = 101.44;
+    region.center.latitude = 13.26;
+    region.center.longitude = 101.50;
     region.span.longitudeDelta = 10.0f;
     region.span.latitudeDelta = 10.0f;
     [_mapView setRegion:region animated:YES];
@@ -972,9 +1045,7 @@ CLLocationCoordinate2D circleCoordinate;
 }
 
 - (void)warning {
-    [CSNotificationView showInViewController:self
-                                        style:CSNotificationViewStyleWarning
-                                    message:@"แผนที่ดังกล่าว ไม่สามารถใช้เพื่อการอ้างอิงในทางกฏหมายได้ !"];
+    /*[[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"แผนที่ดังกล่าว ไม่สามารถใช้เพื่อการอ้างอิงในทางกฏหมายได้ !" andImage:nil andWithType:Message andWithDuration:50.0 inViewController:self atPostion:Top canBeDismissedByUser:NO]];*/
 }
 
 - (void)updateLocations {
@@ -1268,55 +1339,63 @@ CLLocationCoordinate2D circleCoordinate;
                                    _mapView.visibleMapRect = flyTo;*/
                                    
                                    [self setMapRegion];
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
+                                   [self DownloadSuccess];
                                    
-                                   [blurView removeFromSuperview];
-                                   
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   self.elaserAreaButton.hidden = NO;
-                                   self.SwitchContainer.hidden = NO;
-                                
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleSuccess
-                                                                    message:@"Overlay Complete"];
+                                    self.SwitchContainer.hidden = NO;
                                    
                                } else if ([data length] == 0 && error == nil) {
                                    NSLog(@"Nothing was downloaded.");
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
-                                   
-                                   [blurView removeFromSuperview];
-                                   
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleError
-                                                                    message:@"Overlay Error!"];
+                                   [self NothingWasDownload];
                                } else if (error != nil) {
                                    NSLog(@"Error = %@", error);
-                                   
-                                   UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Disconnected", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
-                                   [alertView show];
-                                   
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
-                                   
-                                   [blurView removeFromSuperview];
-                                   
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleError
-                                                                    message:@"Overlay Error!"];
+                                   [self Disconnected];
                                }
                            }];
+}
+-(void)DownloadSuccess {
+    
+    [_progressView stopAnimating];
+    [self setTitle:@"Map"];//---[self hideLoadingMode];
+    
+    [blurView removeFromSuperview];
+    
+    self.navigationItem.leftBarButtonItem.enabled = YES;
+    _mapChageButton.enabled = YES;
+    _listChageButton.enabled = YES;
+    self.elaserAreaButton.hidden = NO;
+    
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+}
+-(void)NothingWasDownload {
+    
+    /*UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Nothing was downloaded.", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
+    [alertView show];*/
+    
+    [_progressView stopAnimating];
+    [self setTitle:@"Map"];//---[self hideLoadingMode];
+    
+    [blurView removeFromSuperview];
+    
+    self.navigationItem.leftBarButtonItem.enabled = YES;
+    _mapChageButton.enabled = YES;
+    _listChageButton.enabled = YES;
+    
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Data fail" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+}
+-(void)Disconnected {
+    /*UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Disconnected", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
+    [alertView show];*/
+    
+    [_progressView stopAnimating];
+    [self setTitle:@"Map"];//---[self hideLoadingMode];
+    
+    [blurView removeFromSuperview];
+    
+    self.navigationItem.leftBarButtonItem.enabled = YES;
+    _mapChageButton.enabled = YES;
+    _listChageButton.enabled = YES;
+    
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Disconnected" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
 }
 
 -(void)selectDigitizeFuctions {
@@ -1522,7 +1601,7 @@ CLLocationCoordinate2D circleCoordinate;
     
     if(coordsDigitize != NULL)
         free(coordsDigitize);
-    coordsDigitize = malloc(sizeof(CLLocationCoordinate2D) * numberOfCoordinates);
+    coordsDigitize = (CLLocationCoordinate2D *)malloc(sizeof(CLLocationCoordinate2D) * numberOfCoordinates);
     
     for(int pathIndex = 0; pathIndex < numberOfCoordinates; pathIndex++){
         CLLocation *location = [self.pathDigitize objectAtIndex:pathIndex];
@@ -1552,9 +1631,7 @@ CLLocationCoordinate2D circleCoordinate;
         
         self.navigationItem.leftBarButtonItem.enabled = YES;
         [blurView removeFromSuperview];
-        [CSNotificationView showInViewController:self
-                                           style:CSNotificationViewStyleError
-                                         message:@"NO Point"];
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
     } else {
         
         records =  [[[MyDatabaseManager sharedManager] allRecordsSortByAttribute:sortingAttribute] mutableCopy];
@@ -1594,7 +1671,7 @@ CLLocationCoordinate2D circleCoordinate;
         NSEntityDescription *bioEntry = [[model entitiesByName] objectForKey:@"RecordTables"];
         RecordTables* pin = [[RecordTables alloc] initWithEntity:bioEntry insertIntoManagedObjectContext:context];
         
-        CLLocationCoordinate2D *coords = malloc([records count] * sizeof(CLLocationCoordinate2D));
+        CLLocationCoordinate2D *coords = (CLLocationCoordinate2D *)malloc([records count] * sizeof(CLLocationCoordinate2D));
         
         for(int i = 0; i < [records count]; i++) {
             pin = [records objectAtIndex:i];
@@ -1617,9 +1694,9 @@ CLLocationCoordinate2D circleCoordinate;
         _mapChageButton.enabled = YES;
         _listChageButton.enabled = YES;
         [blurView removeFromSuperview];
-        [CSNotificationView showInViewController:self
-                                           style:CSNotificationViewStyleSuccess
-                                         message:@"Point to Polyline Success"];
+       
+        //Point to Polyline Success
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
         [self setMapRegion];
     }
 }
@@ -1643,9 +1720,8 @@ CLLocationCoordinate2D circleCoordinate;
         _mapChageButton.enabled = YES;
         _listChageButton.enabled = YES;
         [blurView removeFromSuperview];
-        [CSNotificationView showInViewController:self
-                                           style:CSNotificationViewStyleError
-                                         message:@"NO Point"];
+        
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
     } else {
         
         records =  [[[MyDatabaseManager sharedManager] allRecordsSortByAttribute:sortingAttribute] mutableCopy];
@@ -1685,7 +1761,7 @@ CLLocationCoordinate2D circleCoordinate;
         NSEntityDescription *bioEntry = [[model entitiesByName] objectForKey:@"RecordTables"];
         RecordTables* pin = [[RecordTables alloc] initWithEntity:bioEntry insertIntoManagedObjectContext:context];
         
-        CLLocationCoordinate2D *coords = malloc([records count] * sizeof(CLLocationCoordinate2D));
+        CLLocationCoordinate2D *coords = (CLLocationCoordinate2D *)malloc([records count] * sizeof(CLLocationCoordinate2D));
         
         for(int i = 0; i < [records count]; i++) {
             pin = [records objectAtIndex:i];
@@ -1706,9 +1782,9 @@ CLLocationCoordinate2D circleCoordinate;
         _mapChageButton.enabled = YES;
         _listChageButton.enabled = YES;
         [blurView removeFromSuperview];
-        [CSNotificationView showInViewController:self
-                                           style:CSNotificationViewStyleSuccess
-                                         message:@"Point to Polygon Success"];
+        
+        //Point to Polygon Success
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
         [self setMapRegion];
     }
 }
@@ -2119,9 +2195,9 @@ CLLocationCoordinate2D circleCoordinate;
             self.navigationItem.leftBarButtonItem.enabled = YES;
             _mapChageButton.enabled = YES;
             _listChageButton.enabled = YES;
-            [CSNotificationView showInViewController:self
-                                               style:CSNotificationViewStyleError
-                                             message:@"Route Error!"];
+            
+            [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Error" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+            
             [self closeTransparentView];
             return;
         }
@@ -2417,9 +2493,9 @@ CLLocationCoordinate2D circleCoordinate;
     _mapChageButton.enabled = YES;
     _listChageButton.enabled = YES;
     [blurView removeFromSuperview];
-    [CSNotificationView showInViewController:self
-                                       style:CSNotificationViewStyleSuccess
-                                     message:@"Route Success"];
+    
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+    
     _routeDistance.text = [NSString stringWithFormat:@"%0.1f km",_currentRoute.distance / 1000.0];
     self.routeDistance.hidden = NO;
     self.stepRoute.hidden = NO;
@@ -4705,7 +4781,7 @@ CLLocationCoordinate2D circleCoordinate;
     }
     else if ([view.annotation isKindOfClass:[MKPointAnnotation class]]) {
         
-        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Dropped Pin"message:[NSString stringWithFormat:@"Latitude: %.4f , Longitude: %.4f",toAdd.coordinate.latitude,toAdd.coordinate.longitude] delegate:self cancelButtonTitle:@"cancel"otherButtonTitles: nil];
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Dropped Pin" message:[NSString stringWithFormat:@"Latitude: %.4f , Longitude: %.4f",toAdd.coordinate.latitude,toAdd.coordinate.longitude] delegate:self cancelButtonTitle:@"cancel" otherButtonTitles: nil];
         [alertView show];
         self.elaserAreaButton.hidden = NO;
     }
@@ -5132,54 +5208,15 @@ CLLocationCoordinate2D circleCoordinate;
                                            }
                                        }
                                    }
-                                   
                                    [self setMapRegion];
                                    
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
-                                   
-                                   [blurView removeFromSuperview];
-                                   
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   self.elaserAreaButton.hidden = NO;
-                                   
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleSuccess
-                                                                    message:@"Overlay Complete"];
-                                   
+                                   [self DownloadSuccess];
                                } else if ([data length] == 0 && error == nil) {
                                    NSLog(@"Nothing was downloaded.");
-                                   
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
-                                   
-                                   [blurView removeFromSuperview];
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleError
-                                                                    message:@"Overlay Error!"];
+                                   [self NothingWasDownload];
                                } else if (error != nil) {
                                    NSLog(@"Error = %@", error);
-                                   
-                                   UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Disconnected", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
-                                   [alertView show];
-                                   
-                                   [_progressView stopAnimating];
-                                   [self setTitle:@"Map"];//---[self hideLoadingMode];
-                                   
-                                   [blurView removeFromSuperview];
-                                   self.navigationItem.leftBarButtonItem.enabled = YES;
-                                   _mapChageButton.enabled = YES;
-                                   _listChageButton.enabled = YES;
-                                   
-                                   [CSNotificationView showInViewController:self
-                                                                      style:CSNotificationViewStyleError
-                                                                    message:@"Overlay Error!"];
+                                   [self Disconnected];
                                }
                            }];
 }
@@ -6213,6 +6250,7 @@ CLLocationCoordinate2D circleCoordinate;
 }
 
 - (void)leveyPopListViewDidCancel {
+
 }
 
 /*-(void)connectURL_JSON {

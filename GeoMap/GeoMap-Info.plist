@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- for requestAlwaysAuthorization -->
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Explain for what are you using the user location</string>
+    <!-- for requestWhenInUseAuthorization -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Explain for what are you using the user location</string>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -30,6 +37,7 @@
 	<string>Main_iPad</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
+		<string>armv7s</string>
 		<string>armv7</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>

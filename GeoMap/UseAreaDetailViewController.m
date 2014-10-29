@@ -346,6 +346,14 @@
     return 50;
 }
 
+-(void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section
+{
+    UITableViewHeaderFooterView *header = (UITableViewHeaderFooterView *)view;
+    
+    header.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:13];
+    header.textLabel.textColor = [UIColor blackColor];
+}
+
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     MATableViewSection *mySection = _sections[section];
     return mySection.headerHeight;

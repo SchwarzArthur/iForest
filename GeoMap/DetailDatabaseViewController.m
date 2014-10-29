@@ -106,7 +106,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
 }
 -(void)action {
 
-    NSString *textToShare = [NSString stringWithFormat:@"#iForest My Position : ( Lat: %.4f , Lon: %.4f ).",[record.coordinate_y doubleValue],[record.coordinate_x doubleValue]];
+    NSString *textToShare = [NSString stringWithFormat:@"#iForest %@ (Lat: %.4f , Lon: %.4f) %@",record.name,[record.coordinate_y doubleValue],[record.coordinate_x doubleValue],record.descriptions];
     UIImage *imagetoshare = [UIImage imageWithData:record.photo];
     
     if (record.photo != nil) {
@@ -114,6 +114,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
     } else {
         activityItems = @[textToShare];
     }
+    
     UIActivityViewController *activity = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
  /*   activity.excludedActivityTypes = @[UIActivityTypePostToWeibo,
                                          UIActivityTypeMessage,
@@ -130,6 +131,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                                          UIActivityTypePostToTencentWeibo,
                                          UIActivityTypeAirDrop];*/
     //activity.excludedActivityTypes = @[UIActivityTypePostToFacebook];
+ 
     [self presentViewController:activity animated:TRUE completion:nil];
     
     /*@{
@@ -173,7 +175,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
     _nameField.placeholder = NSLocalizedString(@"Name :", @"");
     _nameField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"Name", @"") attributes:@{NSForegroundColorAttributeName: [UIColor lightGrayColor]}];
     _nameField.font = [UIFont systemFontOfSize:kJVFieldFontSize];
-    _nameField.floatingLabel.font = [UIFont boldSystemFontOfSize:kJVFieldFloatingLabelFontSize];
+    _nameField.floatingLabel.font = [UIFont fontWithName:@"Avenir Next" size:kJVFieldFloatingLabelFontSize];
     _nameField.floatingLabelTextColor = floatingLabelColor;
     _nameField.text = record.name;
     _nameField.textColor = [UIColor blackColor];
@@ -184,7 +186,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
     _pinTypeField.placeholder = NSLocalizedString(@"Pin type :", @"");
     _pinTypeField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"Pin type", @"") attributes:@{NSForegroundColorAttributeName: [UIColor lightGrayColor]}];
     _pinTypeField.font = [UIFont systemFontOfSize:kJVFieldFontSize];
-    _pinTypeField.floatingLabel.font = [UIFont boldSystemFontOfSize:kJVFieldFloatingLabelFontSize];
+    _pinTypeField.floatingLabel.font = [UIFont fontWithName:@"Avenir Next" size:kJVFieldFloatingLabelFontSize];
     _pinTypeField.floatingLabelTextColor = floatingLabelColor;
     _pinTypeField.text = record.type;
     _pinTypeField.textColor = [UIColor blackColor];
@@ -193,7 +195,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
     [____tableView addSubview:_pinTypeField];
     
     _descriptionField.placeholder = NSLocalizedString(@"Description :", @"");
-    _descriptionField.font = [UIFont systemFontOfSize:kJVFieldFontSize];
+    _descriptionField.font = [UIFont fontWithName:@"Avenir Next" size:kJVFieldFontSize];
     _descriptionField.floatingLabel.font = [UIFont boldSystemFontOfSize:kJVFieldFloatingLabelFontSize];
     _descriptionField.floatingLabelTextColor = floatingLabelColor;
     _descriptionField.text = record.descriptions;
@@ -209,7 +211,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
 
     self.navigationItem.title = @"หมุดปัก";//[NSString stringWithFormat:@"%@",self.pin.title];
     self.navigationController.navigationBar.translucent = YES;
-    self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
+    //self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
     // [self.navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavBar.png"] forBarMetrics:UIBarMetricsDefault];
     self.navigationController.navigationBar.barTintColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
     self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
@@ -255,7 +257,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
     
     UILabel *slice = [[UILabel alloc] initWithFrame:CGRectMake(0, 15, 320, 11)];
     slice.text = @"Slice";
-    slice.font = [UIFont systemFontOfSize:11];
+    slice.font = [UIFont fontWithName:@"Avenir Next" size:11];
     slice.backgroundColor = [UIColor clearColor];
     slice.textColor = [UIColor whiteColor];
     slice.textAlignment = NSTextAlignmentCenter;
@@ -292,7 +294,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 subThoroughfare.text = [NSString stringWithFormat:@"%@",
                                         placemark.subThoroughfare];
             }
-            subThoroughfare.font = [UIFont systemFontOfSize:13];
+            subThoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             subThoroughfare.backgroundColor = [UIColor clearColor];
             subThoroughfare.textColor = [UIColor blackColor];
             [subThoroughfare sizeToFit];
@@ -305,7 +307,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 thoroughfare.text = [NSString stringWithFormat:@"%@",
                                      placemark.thoroughfare];
             }
-            thoroughfare.font = [UIFont systemFontOfSize:13];
+            thoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             thoroughfare.backgroundColor = [UIColor clearColor];
             thoroughfare.textColor = [UIColor blackColor];
             [thoroughfare sizeToFit];
@@ -318,7 +320,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 locality.text = [NSString stringWithFormat:@"%@",
                                  placemark.locality];
             }
-            locality.font = [UIFont systemFontOfSize:13];
+            locality.font = [UIFont fontWithName:@"Avenir Next" size:13];
             locality.backgroundColor = [UIColor clearColor];
             locality.textColor = [UIColor blackColor];
             [locality sizeToFit];
@@ -331,7 +333,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 administrativeArea.text = [NSString stringWithFormat:@"%@",
                                            placemark.administrativeArea];
             }
-            administrativeArea.font = [UIFont systemFontOfSize:12];
+            administrativeArea.font = [UIFont fontWithName:@"Avenir Next" size:12];
             administrativeArea.backgroundColor = [UIColor clearColor];
             administrativeArea.textColor = [UIColor blackColor];
             [administrativeArea sizeToFit];
@@ -350,7 +352,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 country.text = [NSString stringWithFormat:@"%@,  %@",
                                 placemark.country,placemark.postalCode];
             }
-            country.font = [UIFont systemFontOfSize:13];
+            country.font = [UIFont fontWithName:@"Avenir Next" size:13];
             country.backgroundColor = [UIColor clearColor];
             country.textColor = [UIColor blackColor];
             [country sizeToFit];
@@ -390,7 +392,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
         _addImage= [[UIButton alloc] initWithFrame:CGRectMake( ____tableView.frame.size.width - 123, 68, 24, 24)];;
         [_addImage setTitle:@"+" forState:UIControlStateNormal];
         [_addImage setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        _addImage.titleLabel.font = [UIFont boldSystemFontOfSize: 20];
+        _addImage.titleLabel.font = [UIFont fontWithName:@"Avenir Next Bold" size:20];
         _addImage.backgroundColor = [UIColor redColor];
         _addImage.layer.borderColor = [UIColor redColor].CGColor;
         _addImage.layer.borderWidth = 1.0f;
@@ -405,7 +407,7 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
 
         UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(14, 68, 0, 0)];
         label.text = @"Attribute";
-        label.font = [UIFont systemFontOfSize:20];
+        label.font = [UIFont fontWithName:@"Avenir Next Bold" size:18];
         label.backgroundColor = [UIColor clearColor];
         label.textColor = [UIColor blackColor];
         [label sizeToFit];
@@ -676,14 +678,14 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 12.0f;
                 break;
  
             case 7:
-                [cell.textLabel setText:@"X (easting) [UTM]"];
+                [cell.textLabel setText:@"X (easting) [UTM WGS84]"];
                 [cell.detailTextLabel setText:[NSString stringWithFormat:@"%.1f",utmCoordinates.easting]];
                 [cell.textLabel setTextColor:[UIColor colorWithRed:0 green:122/255. blue:1 alpha:1.0f]];
                 cell.backgroundColor = [UIColor whiteColor];
                 break;
                 
             case 8:
-                [cell.textLabel setText:@"Y (northing) [UTM]"];
+                [cell.textLabel setText:@"Y (northing) [UTM WGS84]"];
                 [cell.detailTextLabel setText:[NSString stringWithFormat:@"%.1f",utmCoordinates.northing]];
                 [cell.textLabel setTextColor:[UIColor colorWithRed:0 green:122/255. blue:1 alpha:1.0f]];
                 cell.backgroundColor = [UIColor whiteColor];

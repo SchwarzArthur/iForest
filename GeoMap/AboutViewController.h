@@ -7,7 +7,10 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "PWParallaxScrollView.h"
 
-@interface AboutViewController : UIViewController
+@interface AboutViewController : UIViewController<UITableViewDataSource, UITableViewDelegate>
+
+@property (weak, nonatomic) IBOutlet UITableView *___tableView;
 
 @end

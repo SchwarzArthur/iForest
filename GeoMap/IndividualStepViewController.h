@@ -7,7 +7,8 @@
 //
 
 #import <UIKit/UIKit.h>
-@import MapKit;
+#import <MapKit/MapKit.h>
+#import <CoreLocation/CoreLocation.h>
 
 @interface IndividualStepViewController : UIViewController
 

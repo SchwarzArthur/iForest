@@ -1463,6 +1463,14 @@
     return 44;
 }
 
+-(void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section
+{
+    UITableViewHeaderFooterView *header = (UITableViewHeaderFooterView *)view;
+    
+    header.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:13];
+    header.textLabel.textColor = [UIColor blackColor];
+}
+
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     static NSString *cellIdentifier = @"Cell";
@@ -1473,11 +1481,11 @@
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellIdentifier];
         
         
-        cell.textLabel.font = [UIFont fontWithName:@"Thonburi" size:15.0f];
+        cell.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:14];
         cell.textLabel.textColor = [UIColor darkGrayColor];
         
         cell.detailTextLabel.textColor = [UIColor grayColor];
-        cell.detailTextLabel.font = [UIFont fontWithName:@"Heiti TC" size:10.0f];
+        cell.detailTextLabel.font = [UIFont fontWithName:@"Avenir Next" size:8];
         
        /* UILabel *distanceLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 70.0, 25.0)];
         distanceLabel.font = [UIFont fontWithName:@"Futura" size:12.0f];

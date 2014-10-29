@@ -753,6 +753,14 @@ static CGFloat kImageOriginHight = 190.f;
     return mySection.cells[indexPath.row];
 }
 
+-(void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section
+{
+    UITableViewHeaderFooterView *header = (UITableViewHeaderFooterView *)view;
+    
+    header.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:13];
+    header.textLabel.textColor = [UIColor blackColor];
+}
+
 
 #pragma  mark - Table view delegate
 

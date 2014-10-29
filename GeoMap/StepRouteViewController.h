@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <MapKit/MapKit.h>
-@import MapKit;
+//@import MapKit;
 
 @interface StepRouteViewController : UIViewController<UITableViewDelegate, UITableViewDataSource>
 

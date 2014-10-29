@@ -37,12 +37,11 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
     [super viewDidLoad];
     
     self.navigationItem.title = @"ข้อมูลอื่นๆ";
+    
     //User location tracking
     _locationManager = [[CLLocationManager alloc] init];
     [_locationManager setDelegate:self];
     [_locationManager startUpdatingLocation];
-    
-    [_locationManager requestAlwaysAuthorization];
     
     _userLocation = [_locationManager.location copy];
     NSLog(@"%f %f User location", self.userLocation.coordinate.latitude, self.userLocation.coordinate.longitude);
@@ -63,7 +62,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 subThoroughfare.text = [NSString stringWithFormat:@"%@",
                                         placemark.subThoroughfare];
             }
-            subThoroughfare.font = [UIFont systemFontOfSize:13];
+            subThoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             subThoroughfare.backgroundColor = [UIColor clearColor];
             subThoroughfare.textColor = [UIColor blackColor];
             [subThoroughfare sizeToFit];
@@ -76,7 +75,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 thoroughfare.text = [NSString stringWithFormat:@"%@",
                                      placemark.thoroughfare];
             }
-            thoroughfare.font = [UIFont systemFontOfSize:13];
+            thoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             thoroughfare.backgroundColor = [UIColor clearColor];
             thoroughfare.textColor = [UIColor blackColor];
             [thoroughfare sizeToFit];
@@ -89,7 +88,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 locality.text = [NSString stringWithFormat:@"%@",
                                  placemark.locality];
             }
-            locality.font = [UIFont systemFontOfSize:13];
+            locality.font = [UIFont fontWithName:@"Avenir Next" size:13];
             locality.backgroundColor = [UIColor clearColor];
             locality.textColor = [UIColor blackColor];
             [locality sizeToFit];
@@ -102,7 +101,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 administrativeArea.text = [NSString stringWithFormat:@"%@",
                                            placemark.administrativeArea];
             }
-            administrativeArea.font = [UIFont systemFontOfSize:12];
+            administrativeArea.font = [UIFont fontWithName:@"Avenir Next" size:12];
             administrativeArea.backgroundColor = [UIColor clearColor];
             administrativeArea.textColor = [UIColor blackColor];
             [administrativeArea sizeToFit];
@@ -121,7 +120,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 country.text = [NSString stringWithFormat:@"%@,  %@",
                                 placemark.country,placemark.postalCode];
             }
-            country.font = [UIFont systemFontOfSize:13];
+            country.font = [UIFont fontWithName:@"Avenir Next" size:13];
             country.backgroundColor = [UIColor clearColor];
             country.textColor = [UIColor blackColor];
             [country sizeToFit];
@@ -208,6 +207,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
         switch ([indexPath row]) {
             
             case 0:
+            {
                 [cell.textLabel setText:@"ระยะทางขจัดถึงจุดกึ่งกลางพื้นที่ :"];//≃
                 
                 CLLocationDistance distance = [_userLocation distanceFromLocation:location];
@@ -223,7 +223,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 //cell.detailTextLabel.font = [UIFont systemFontOfSize:15];
                 cell.backgroundColor = [UIColor whiteColor];
                 break;
-                
+            }
             case 1:
                 
                 [cell.textLabel setText:@"ที่ตั้ง :"];
@@ -279,7 +279,7 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
                 //cell.detailTextLabel.font = [UIFont systemFontOfSize:15];
                 cell.backgroundColor = [UIColor whiteColor];
                 break;
-                
+        
         }
         
     } else if (indexPath.section == 1) {

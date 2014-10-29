@@ -118,7 +118,7 @@ static CGFloat kImageOriginHight = 190.f;
                 subThoroughfare.text = [NSString stringWithFormat:@"%@",
                                         placemark.subThoroughfare];
             }
-            subThoroughfare.font = [UIFont systemFontOfSize:13];
+            subThoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             subThoroughfare.backgroundColor = [UIColor clearColor];
             subThoroughfare.textColor = [UIColor blackColor];
             [subThoroughfare sizeToFit];
@@ -131,7 +131,7 @@ static CGFloat kImageOriginHight = 190.f;
                 thoroughfare.text = [NSString stringWithFormat:@"%@",
                                      placemark.thoroughfare];
             }
-            thoroughfare.font = [UIFont systemFontOfSize:13];
+            thoroughfare.font = [UIFont fontWithName:@"Avenir Next" size:13];
             thoroughfare.backgroundColor = [UIColor clearColor];
             thoroughfare.textColor = [UIColor blackColor];
             [thoroughfare sizeToFit];
@@ -144,7 +144,7 @@ static CGFloat kImageOriginHight = 190.f;
                 locality.text = [NSString stringWithFormat:@"%@",
                                  placemark.locality];
             }
-            locality.font = [UIFont systemFontOfSize:13];
+            locality.font = [UIFont fontWithName:@"Avenir Next" size:13];
             locality.backgroundColor = [UIColor clearColor];
             locality.textColor = [UIColor blackColor];
             [locality sizeToFit];
@@ -157,7 +157,7 @@ static CGFloat kImageOriginHight = 190.f;
                 administrativeArea.text = [NSString stringWithFormat:@"%@",
                                            placemark.administrativeArea];
             }
-            administrativeArea.font = [UIFont systemFontOfSize:12];
+            administrativeArea.font = [UIFont fontWithName:@"Avenir Next" size:12];
             administrativeArea.backgroundColor = [UIColor clearColor];
             administrativeArea.textColor = [UIColor blackColor];
             [administrativeArea sizeToFit];
@@ -176,7 +176,7 @@ static CGFloat kImageOriginHight = 190.f;
                 country.text = [NSString stringWithFormat:@"%@,  %@",
                                 placemark.country,placemark.postalCode];
             }
-            country.font = [UIFont systemFontOfSize:13];
+            country.font = [UIFont fontWithName:@"Avenir Next" size:13];
             country.backgroundColor = [UIColor clearColor];
             country.textColor = [UIColor blackColor];
             [country sizeToFit];
@@ -424,14 +424,14 @@ static CGFloat kImageOriginHight = 190.f;
             
                 
             case 3:
-                [cell.textLabel setText:@"X (easting) [UTM]"];
+                [cell.textLabel setText:@"X (easting) [UTM WGS84]"];
                 [cell.detailTextLabel setText:[NSString stringWithFormat:@"%.1f",utmCoordinates.easting]];
                 [cell.textLabel setTextColor:[UIColor colorWithRed:0 green:122/255. blue:1 alpha:1.0f]];
                 cell.backgroundColor = [UIColor whiteColor];
                 break;
                 
             case 4:
-                [cell.textLabel setText:@"Y (northing) [UTM]"];
+                [cell.textLabel setText:@"Y (northing) [UTM WGS84]"];
                 [cell.detailTextLabel setText:[NSString stringWithFormat:@"%.1f",utmCoordinates.northing]];
                 [cell.textLabel setTextColor:[UIColor colorWithRed:0 green:122/255. blue:1 alpha:1.0f]];
                 cell.backgroundColor = [UIColor whiteColor];

@@ -21,7 +21,7 @@
     [super viewDidLoad];
 
     self.navigationItem.title = [NSString stringWithFormat:@"Route Steps of %lu", (unsigned long)[_route.steps count]];
-    self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
+   // self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
     self.navigationController.navigationBar.barTintColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
     self.navigationController.navigationBar.tintColor = [UIColor whiteColor];    
 }

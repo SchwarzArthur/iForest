@@ -24,7 +24,6 @@
 #define kWatershadURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON/WATERSHAD"
 #define kAmphoeURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON/AMPHOE"
 #define kOtherLayerURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON"//http://schwarzarthur.bugs3.com/iForestLayer/
-@import MapKit;
 
 typedef enum {
     TBL_CELL_NONE,

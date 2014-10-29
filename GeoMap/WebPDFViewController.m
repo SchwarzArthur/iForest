@@ -33,7 +33,7 @@
     
     self.navigationItem.title = @"PDF";//[NSString stringWithFormat:@"%@",self.area.type];
     self.navigationController.navigationBar.translucent = YES;
-    self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
+    //self.navigationController.navigationBar.barStyle = UIStatusBarStyleLightContent;
     self.navigationController.navigationBar.barTintColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
     self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
     

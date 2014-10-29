@@ -29,6 +29,17 @@ const static CGFloat kJVFieldHMargin = 10.0f;
     [super viewDidLoad];
     
     // [self.view setBackgroundColor:[UIColor colorWithRed:0.97f green:0.97f blue:0.97f alpha:1.00f]];
+    _dismissButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
+    {
+        _dismissButton.frame = CGRectMake(self.view.frame.size.width - 46, 140, 32, 32);
+    } else {
+        _dismissButton.frame = CGRectMake(self.view.frame.size.width - 46, 140, 32, 32);
+    }
+    [_dismissButton setImage:[UIImage imageNamed:@"btn-close"] forState:UIControlStateNormal];
+  
+    [_dismissButton addTarget:self action:@selector(dismiss) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_dismissButton];
     
     UILabel *setting = [[UILabel alloc] initWithFrame:CGRectMake(0,180, self.view.frame.size.width, 15)];
     setting.text = @"Setting Map";
@@ -122,6 +133,9 @@ const static CGFloat kJVFieldHMargin = 10.0f;
     [self.view addSubview:_googleMap];
     [self.view addSubview:_strandardMap];
  
+}
+-(void)dismiss {
+    [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)didReceiveMemoryWarning
