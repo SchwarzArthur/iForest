@@ -18,7 +18,7 @@
 
 #define kPDFURL @"http://pirun.ku.ac.th/~b521030091/PDF/NRF"
 
-@interface DetailViewController : UIViewController <MKMapViewDelegate,UITableViewDataSource, UITableViewDelegate>
+@interface DetailViewController : UIViewController <CLLocationManagerDelegate,MKMapViewDelegate,UITableViewDataSource, UITableViewDelegate>
 {
     NSArray *_sections;
     UIImage *image;
@@ -28,6 +28,7 @@
 @property (weak, nonatomic) IBOutlet UITableView *__tableView;
 @property (weak, nonatomic) IBOutlet MKMapView *__mapView;
 
+@property (strong, nonatomic) CLLocationManager *locationManager;
 
 @property (strong, nonatomic) IBOutlet UISegmentedControl *mapTypeSegmentedControl;
 

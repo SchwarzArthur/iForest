@@ -333,7 +333,7 @@ typedef NS_ENUM(NSUInteger, MCSwipeTableViewCellDirection) {
         UIPanGestureRecognizer *g = (UIPanGestureRecognizer *)gestureRecognizer;
         CGPoint point = [g velocityInView:self];
         
-        if (fabsf(point.x) > fabsf(point.y) ) {
+        if (fabs(point.x) > fabsf(point.y) ) {
             if (point.x < 0 && !_modeForState3 && !_modeForState4) {
                 return NO;
             }

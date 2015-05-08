@@ -251,7 +251,7 @@ const int AGPhotoBrowserThresholdToCenter = 150;
     CGPoint translation = [gestureRecognizer translationInView:[imageView superview]];
 	
     // -- Check for horizontal gesture
-    if (fabsf(translation.x) > fabsf(translation.y)) {
+    if (fabs(translation.x) > fabs(translation.y)) {
         return YES;
 	}
 	
@@ -282,7 +282,7 @@ const int AGPhotoBrowserThresholdToCenter = 150;
 		// -- Check if user dismissed the view
 		CGPoint endingPanPoint = [recognizer translationInView:self];
 		CGPoint translatedPoint = CGPointMake(_startingPanPoint.x - endingPanPoint.y, _startingPanPoint.y);
-		int heightDifference = abs(floor(_startingPanPoint.x - translatedPoint.x));
+		int heightDifference = fabs(floor(_startingPanPoint.x - translatedPoint.x));
 		
 		if (heightDifference <= AGPhotoBrowserThresholdToCenter) {
             
@@ -311,7 +311,7 @@ const int AGPhotoBrowserThresholdToCenter = 150;
 		CGPoint middlePanPoint = [recognizer translationInView:self];
 		CGPoint translatedPoint = CGPointMake(_startingPanPoint.x - middlePanPoint.y, _startingPanPoint.y);
 		imageView.center = translatedPoint;
-		int heightDifference = abs(floor(_startingPanPoint.x - translatedPoint.x));
+		int heightDifference = fabs(floor(_startingPanPoint.x - translatedPoint.x));
 		CGFloat ratio = (_startingPanPoint.x - heightDifference)/_startingPanPoint.x;
 		self.backgroundColor = [UIColor colorWithWhite:0. alpha:ratio];
 	}

@@ -170,7 +170,16 @@ static CGFloat kImageOriginHight = 190.f;
         view;
     });
     
-    [___mapView setShowsUserLocation:NO];
+    self.locationManager = [[CLLocationManager alloc] init];
+    self.locationManager.delegate = self;
+    
+    if([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        //[self.locationManager requestWhenInUseAuthorization];
+        [self.locationManager requestAlwaysAuthorization];
+        [self.locationManager startUpdatingLocation];
+    }
+    [___mapView setShowsUserLocation:YES];
+    [___mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
     
  /*   NSArray * pole  = [self.area.polygon componentsSeparatedByString:@";"];
     
@@ -668,7 +677,7 @@ static CGFloat kImageOriginHight = 190.f;
 #pragma mark - Actions
 
 - (void)pushSafari {
-    NSURL *url = [NSURL URLWithString:@"http://www.stackoverflow.com"];
+    NSURL *url = [NSURL URLWithString:@"http://www.forest.go.th"];
     
     [[UIApplication sharedApplication] openURL:url];
     
@@ -694,14 +703,14 @@ static CGFloat kImageOriginHight = 190.f;
 }
 
 - (void)pushSurveyBook {
-    NSString *urlString = [NSString stringWithFormat: @"%@/%@",kPDFURL,_PDFURL_I];
+    NSString *urlString = [NSString stringWithFormat:@"http://%@",_SURVEYBOOK];
     _url = [NSURL URLWithString:urlString];
     
     [self performSegueWithIdentifier:@"ModalPDF" sender:self];
 }
 
 - (void)pushNRFDocument {
-    NSString *urlString = [NSString stringWithFormat: @"%@/%@",kPDFURL,_PDFURL_I];
+    NSString *urlString = [NSString stringWithFormat:@"http://%@",_NRFDOCUMENT];
     _url = [NSURL URLWithString:urlString];
     
     [self performSegueWithIdentifier:@"ModalPDF" sender:self];

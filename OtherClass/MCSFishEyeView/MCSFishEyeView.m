@@ -386,7 +386,7 @@ static const NSInteger MaxExpansionFunctionNeighbors = 3;
   
   CGFloat expansionSurplus = 0.0;
   
-  for (int i = -self.expansionsNeighbors - 1; i < self.expansionsNeighbors + 1; i++) {
+  for (long i = -self.expansionsNeighbors - 1; i < self.expansionsNeighbors + 1; i++) {
     expansionSurplus += [self scaleForOffsetFromFocusPoint:i * collapsedItemHeight] * itemHeight - collapsedItemHeight;
   }
   
@@ -413,7 +413,7 @@ static const NSInteger MaxExpansionFunctionNeighbors = 3;
 
 - (CGFloat)scaleForOffsetFromFocusPoint:(CGFloat)offset
 {
-  CGFloat normalizedOffset = fabsf(offset/self.collapsedItemHeight);
+  CGFloat normalizedOffset = fabs(offset/self.collapsedItemHeight);
   CGFloat scalar = 0.0;
   
   if (normalizedOffset <= 0.5) {
@@ -432,7 +432,7 @@ static const NSInteger MaxExpansionFunctionNeighbors = 3;
     return 0.0f;
   }
   
-  CGFloat normalizedOffset = fabsf(offset/self.collapsedItemHeight);
+  CGFloat normalizedOffset = fabs(offset/self.collapsedItemHeight);
   CGFloat scalar = 0.0;
   
   const CGFloat NormalizedBottomRange = FingerTranslationRadius/self.collapsedItemHeight;

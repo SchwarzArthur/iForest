@@ -45,13 +45,22 @@ static CGFloat kImageOriginHight = 190.f;
     // [self.navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavBar.png"] forBarMetrics:UIBarMetricsDefault];
     self.navigationController.navigationBar.barTintColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
     self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
-  
-    [____mapView setShowsUserLocation:TRUE];
     
-    //User location tracking
+    /*//User location tracking
     _locationManager = [[CLLocationManager alloc] init];
     [_locationManager setDelegate:self];
-    [_locationManager startUpdatingLocation];
+    [_locationManager startUpdatingLocation];*/
+    
+    self.locationManager = [[CLLocationManager alloc] init];
+    self.locationManager.delegate = self;
+    
+    if([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        //[self.locationManager requestWhenInUseAuthorization];
+        [self.locationManager requestAlwaysAuthorization];
+    }
+    [self.locationManager startUpdatingLocation];
+    
+    [____mapView setShowsUserLocation:YES];
     
     _userLocation = [_locationManager.location copy];
     NSLog(@"%f %f User location", self.userLocation.coordinate.latitude, self.userLocation.coordinate.longitude);
@@ -280,11 +289,34 @@ static CGFloat kImageOriginHight = 190.f;
     }
     
     weatherManager = [[JFWeatherManager alloc]init];
-    [self tableViewContents];
+    [self allow];
+    //[self tableViewContents];
     
     // _titleLabel.text = self.area.title;
     [self addGestureRecogniserToImage];
     
+}
+
+-(void)allow
+{
+    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Allow ''iForest TH'' to access your location data?"
+                                                      message:@"Your location data is used to show local weather in the ''iForest TH'' app"
+                                                     delegate:self
+                                            cancelButtonTitle:@"Don't Allow"
+                                            otherButtonTitles:@"Allow", nil];
+    [message show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    NSString *title = [alertView buttonTitleAtIndex:buttonIndex];
+    if([title isEqualToString:@"Allow"]) {
+        [self tableViewContents];
+        NSLog(@"allow Weather");
+    }
+    else if([title isEqualToString:@"Don't Allow"]) {
+        NSLog(@"Cancel was selected.");
+    }
 }
 
 - (void)addGestureRecogniserToImage{

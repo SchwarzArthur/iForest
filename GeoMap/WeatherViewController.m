@@ -38,19 +38,28 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
     
     self.navigationItem.title = @"ข้อมูลอื่นๆ";
     
-    //User location tracking
+   /* //User location tracking
     _locationManager = [[CLLocationManager alloc] init];
     [_locationManager setDelegate:self];
-    [_locationManager startUpdatingLocation];
+    [_locationManager startUpdatingLocation];*/
+    
+    self.locationManager = [[CLLocationManager alloc] init];
+    self.locationManager.delegate = self;
+    
+    if([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        //[self.locationManager requestWhenInUseAuthorization];
+        [self.locationManager requestAlwaysAuthorization];
+    }
+    [self.locationManager startUpdatingLocation];
     
     _userLocation = [_locationManager.location copy];
     NSLog(@"%f %f User location", self.userLocation.coordinate.latitude, self.userLocation.coordinate.longitude);
     
     geocoder = [[CLGeocoder alloc] init];
     
-    CLLocation *location = [[CLLocation alloc] initWithLatitude:[_weatherLATITUDE doubleValue] longitude:[_weatherLONGITUDE doubleValue]];
+    _location = [[CLLocation alloc] initWithLatitude:[_weatherLATITUDE doubleValue] longitude:[_weatherLONGITUDE doubleValue]];
     
-    [geocoder reverseGeocodeLocation:location completionHandler:^(NSArray *placemarks, NSError *error) {
+    [geocoder reverseGeocodeLocation:_location completionHandler:^(NSArray *placemarks, NSError *error) {
         NSLog(@"Found placemarks: %@, error: %@", placemarks, error);
         if (error == nil && [placemarks count] > 0) {
             placemark = [placemarks lastObject];
@@ -138,8 +147,31 @@ static NSString *API_KEY = @"YOUR_API_KEY_HERE";
     }
     
     weatherManager = [[JFWeatherManager alloc]init];
-    
-    [self tableViewContents];
+
+    [self allow];
+    //[self tableViewContents];
+}
+
+-(void)allow
+{
+    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Allow ''iForest TH'' to access your location data?"
+                                                      message:@"Your location data is used to show local weather in the ''iForest TH'' app"
+                                                     delegate:self
+                                            cancelButtonTitle:@"Don't Allow"
+                                            otherButtonTitles:@"Allow", nil];
+    [message show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    NSString *title = [alertView buttonTitleAtIndex:buttonIndex];
+    if([title isEqualToString:@"Allow"]) {
+        [self tableViewContents];
+        NSLog(@"allow Weather");
+    }
+    else if([title isEqualToString:@"Don't Allow"]) {
+        NSLog(@"Cancel was selected.");
+    }
 }
 
 - (void)didReceiveMemoryWarning

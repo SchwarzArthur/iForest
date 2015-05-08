@@ -91,7 +91,7 @@
     NSUInteger tiley = floor(mercatorPoint.y * [self worldTileWidthForZoomLevel:zoomLevel]);
     NSInteger scale = [[UIScreen mainScreen] scale];
     
-    NSString *path = [NSString stringWithFormat:@"x=%lu&y=%lu&z=%lu&scale=%ld&__type=%u", (unsigned long)tilex, (unsigned long)tiley, (unsigned long)zoomLevel, (long)scale, overlay.mapType];
+    NSString *path = [NSString stringWithFormat:@"x=%lu&y=%lu&z=%lu&scale=%ld&__type=%lu", (unsigned long)tilex, (unsigned long)tiley, (unsigned long)zoomLevel, (long)scale, (unsigned long)overlay.mapType];
     WMImageCache *imageCache = [WMImageCache sharedInstance];
     UIImage *cachedImage = [imageCache cachedImageWithPath:path];
     
@@ -124,7 +124,7 @@
     NSUInteger tiley = floor(mercatorPoint.y * [self worldTileWidthForZoomLevel:zoomLevel]);
     NSInteger scale = [[UIScreen mainScreen] scale];
     
-    NSString *path = [NSString stringWithFormat:@"x=%lu&y=%lu&z=%lu&scale=%ld&__type=%u", (unsigned long)tilex, (unsigned long)tiley, (unsigned long)zoomLevel, (long)scale, overlay.mapType];
+    NSString *path = [NSString stringWithFormat:@"x=%lu&y=%lu&z=%lu&scale=%ld&__type=%lu", (unsigned long)tilex, (unsigned long)tiley, (unsigned long)zoomLevel, (long)scale, (unsigned long)overlay.mapType];
     WMImageCache *imageCache = [WMImageCache sharedInstance];
     UIImage *image = [imageCache cachedImageWithPath:path];
     

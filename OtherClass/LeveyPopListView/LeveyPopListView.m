@@ -162,7 +162,7 @@
          
          CGRect bgRect = CGRectInset(rect,POPLISTVIEW_SCREENINSET- 40 , POPLISTVIEW_SCREENINSET );
          CGRect titleRect = CGRectMake(80 - POPLISTVIEW_SCREENINSET + 10, POPLISTVIEW_SCREENINSET + 10 + 5,
-                                       rect.size.width -  2 * (POPLISTVIEW_SCREENINSET + 10), 30);
+                                       rect.size.width -  2 * (POPLISTVIEW_SCREENINSET + 10) + 80, 30);
          CGRect separatorRect = CGRectMake(80 - POPLISTVIEW_SCREENINSET, POPLISTVIEW_SCREENINSET + POPLISTVIEW_HEADER_HEIGHT - 2,
                                            rect.size.width - 2 * POPLISTVIEW_SCREENINSET + 40, 2);
          
@@ -201,7 +201,7 @@
          
          CGRect bgRect = CGRectInset(rect,POPLISTVIEW_SCREENINSET +90 , POPLISTVIEW_SCREENINSET +100);
          CGRect titleRect = CGRectMake(200 - POPLISTVIEW_SCREENINSET + 10, POPLISTVIEW_SCREENINSET + 10 + 5 + 100,
-                                       rect.size.width -  2 * (POPLISTVIEW_SCREENINSET + 10), 30);
+                                       rect.size.width -  2 * (POPLISTVIEW_SCREENINSET + 10) + 100, 30);
          CGRect separatorRect = CGRectMake(180 - POPLISTVIEW_SCREENINSET, POPLISTVIEW_SCREENINSET + POPLISTVIEW_HEADER_HEIGHT - 2 + 100,
                                            rect.size.width - 2 * POPLISTVIEW_SCREENINSET - 180, 2);
          
@@ -232,7 +232,7 @@
          
          //    [_title drawInRect:titleRect withFont:[UIFont systemFontOfSize:16.]]; Pre iOS 7
          
-         [_title drawInRect:titleRect withAttributes:@{NSForegroundColorAttributeName: [UIColor colorWithRed:0.020 green:0.549 blue:0.961 alpha:1.],NSFontAttributeName:[UIFont fontWithName:@"Avenir Next Bold" size:17] }];
+         [_title drawInRect:titleRect withAttributes:@{NSForegroundColorAttributeName: [UIColor colorWithRed:0.020 green:0.549 blue:0.961 alpha:1.],NSFontAttributeName:[UIFont fontWithName:@"Avenir Next" size:16] }];
          CGContextFillRect(ctx, separatorRect);
      }
 }

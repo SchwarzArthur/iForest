@@ -57,10 +57,13 @@
 #import "OtherLayerAnnotation.h"
 #import "GSIndeterminateProgressView.h"
 #import "AboutViewController.h"
+#import "UCZProgressView.h"
+
+#define NSURLResponseUnknownLength ((long long)-1)
 //---------------
 #import "GHWalkThroughView.h"
 
-static NSString * const sampleDesc1 = @"Application แผนที่และฐานข้อมูล\nทรัพยากรและที่ดินป่าไม้ในมิติของป่าสงวนแห่งชาติ\nในความรับผิดชอบของกรมป่าไม้\n\nIntroduction ➠";
+static NSString * const sampleDesc1 = @"Application แผนที่และฐานข้อมูล\nทรัพยากรและที่ดินป่าไม้ในมิติของป่าสงวนแห่งชาติ\n\n\nIntroduction ➠";
 static NSString * const sampleDesc2 = @"เริ่มต้นใช้งานง่ายๆ ด้วยปุ่ม Menu ด้านบนซ้าย\nที่รวมทุก Functions เอาไว้";
 static NSString * const sampleDesc3 = @"เพิ่มชั้นข้อมูลป่าสงวนแห่งชาติ พื้นที่อนุรักษ์ และอื่นๆ\nเพื่อแสดงบนแผนที่";
 static NSString * const sampleDesc4 = @"แสดง Current Location และปักหมุด\nเพื่อบันทึกและแชร์สถานที่ของคุณได้";
@@ -107,7 +110,7 @@ const static CGFloat kJVFieldHMargin = 10.0f;
 const static CGFloat kJVFieldFontSize = 16.0f;
 const static CGFloat kJVFieldFloatingLabelFontSize = 11.0f;
 
-@interface ViewController ()<MCSwipeTableViewCellDelegate,CurlViewControllerDelegate,LeveyPopListViewDelegate,UITextFieldDelegate,WYPopoverControllerDelegate,GuideWebViewControllerDelegate,GHWalkThroughViewDataSource>
+@interface ViewController ()<MCSwipeTableViewCellDelegate,CurlViewControllerDelegate,LeveyPopListViewDelegate,UITextFieldDelegate,WYPopoverControllerDelegate,GuideWebViewControllerDelegate,GHWalkThroughViewDataSource,NSURLConnectionDelegate, NSURLConnectionDataDelegate>
 {
     __weak IBOutlet MKMapView *_mapView;
     __weak IBOutlet UIView *_containerView;
@@ -148,6 +151,20 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 11.0f;
     DIGITIZE_TYPE digitize_type;
     ROUTE_FROM route_from;
     LAYER layer;
+    
+    NSURLConnection *layerConnectNRF;
+    NSURLConnection *layerConnectNP;
+    NSURLConnection *layerConnectWLS;
+    NSURLConnection *layerConnectNHA;
+    NSURLConnection *layerConnectFP;
+    NSURLConnection *layerConnectMF;
+    NSURLConnection *layerConnectWATERSHAD;
+    NSURLConnection *layerConnectFOREST55_56;
+    NSURLConnection *layerConnectTAMBON;
+    NSURLConnection *layerConnectAMPHOE;
+    NSURLConnection *layerConnectPROVINCE;
+    NSURLConnection *layerConnectINDEX;
+    NSURLConnection *layerConnectCOMMUNITYFOREST;
 
     MKPolyline *_routeOverlay;
     MKRoute *_currentRoute;
@@ -170,12 +187,20 @@ const static CGFloat kJVFieldFloatingLabelFontSize = 11.0f;
     UIImage *imageListPin;
     NSString *stringListPin;
  
-    GSIndeterminateProgressView *_progressView;
+    GSIndeterminateProgressView *_IndeterminateProgressView;
 }
 @property (nonatomic, strong) GHWalkThroughView* ghView ;
 @property (nonatomic, strong) NSArray* descStrings;
 @property (nonatomic, strong) UILabel* welcomeLabel;
 @property (nonatomic, strong) MCSwipeTableViewCell *cellToDelete;
+
+
+@property (nonatomic) IBOutlet UCZProgressView *progressView;
+
+@property (nonatomic) NSMutableData *data;
+@property (nonatomic) double expectedBytes;
+
+
 
 -(void)drawCircleWithCoordinate:(CLLocationCoordinate2D)coord;
 -(void)drawPolygonBorder;
@@ -230,7 +255,7 @@ CLLocationCoordinate2D circleCoordinate;
             [_mapView removeAnnotation:annotation];
         }
     }*/
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     
     //SVBlurView *blurView = [[SVBlurView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     [_mapView addSubview:blurView];
@@ -279,11 +304,11 @@ CLLocationCoordinate2D circleCoordinate;
                 self.elaserAreaButton.hidden = NO;
                 index++;
                 
-                [_progressView stopAnimating];
+                [_IndeterminateProgressView stopAnimating];
                 [self setTitle:@"Map"];//---[self hideLoadingMode];
                 [blurView removeFromSuperview];
                 
-                [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+                [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
             }
         }
     } failure:nil];
@@ -462,7 +487,7 @@ CLLocationCoordinate2D circleCoordinate;
 - (void) configurePage:(GHWalkThroughPageCell *)cell atIndex:(NSInteger)index
 {
    // cell.title = [NSString stringWithFormat:@"This is page %d", index+1];
-    cell.titleImage = [UIImage imageNamed:[NSString stringWithFormat:@"IN500w%d", index+1]];
+    cell.titleImage = [UIImage imageNamed:[NSString stringWithFormat:@"IN500w%ld", index+1]];
     cell.desc = [self.descStrings objectAtIndex:index];
     
         if (index == 0) {
@@ -530,13 +555,13 @@ CLLocationCoordinate2D circleCoordinate;
     
     UINavigationBar *navigationBar = self.navigationController.navigationBar;
     
-    GSIndeterminateProgressView *progressView = [[GSIndeterminateProgressView alloc] initWithFrame:CGRectMake(0, navigationBar.frame.size.height - 2,
+    GSIndeterminateProgressView *IndeterminateProgressView = [[GSIndeterminateProgressView alloc] initWithFrame:CGRectMake(0, navigationBar.frame.size.height - 2,
                                                                                                               navigationBar.frame.size.width, 2)];
-    progressView.progressTintColor = navigationBar.barTintColor;
-    progressView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-    [navigationBar addSubview:progressView];
+    IndeterminateProgressView.progressTintColor = navigationBar.barTintColor;
+    IndeterminateProgressView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [navigationBar addSubview:IndeterminateProgressView];
     
-    _progressView = progressView;
+    _IndeterminateProgressView = IndeterminateProgressView;
     
     [_elaserAreaButton setImage:[UIImage imageNamed:@"clean96.png"] forState:UIControlStateNormal];
     _elaserAreaButton.layer.borderColor = [UIColor whiteColor].CGColor;
@@ -846,6 +871,26 @@ CLLocationCoordinate2D circleCoordinate;
     //----[self arertAddLayer];
     //----[self setMapRegion];
     [self mainmenu];
+    [self configureVerticalMenu];
+    self.verticalMenu.delegate = self;
+  
+    self.verticalMenu.liveBlurBackgroundStyle = self.navigationController.navigationBar.barStyle;
+    
+    
+    self.progressView = [[UCZProgressView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    self.progressView.blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleExtraLight];
+    
+    self.progressView.showsText = YES;
+    self.progressView.radius = 30;
+    
+    self.progressView.indeterminate = YES;
+    //self.progressView.lineWidth = 6;
+    //self.progressView.textSize = 12;
+    self.progressView.textColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
+    //[UIColor colorWithRed:1.0 green:0.231 blue:0.188 alpha:1.0];
+    self.progressView.usesVibrancyEffect = NO;
+    self.progressView.tintColor = [UIColor colorWithRed:24.0/255.0 green:116.0/255.0 blue:255.0/255.0 alpha:1];
+    //[UIColor colorWithRed:0.0 green:122.0 / 255.0 blue:1.0 alpha:1.0];
 }
 
 /*-(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations {
@@ -856,6 +901,123 @@ CLLocationCoordinate2D circleCoordinate;
     region.span.longitudeDelta = 0.0137f;
     [_mapView setRegion:region animated:YES];
 }*/
+
+#pragma mark - FCVerticalMenu Configuration
+- (void)configureVerticalMenu
+{
+    [self closeTransparentView];
+    [drawer hideAnimated:YES];
+    
+    FCVerticalMenuItem *item1 = [[FCVerticalMenuItem alloc] initWithTitle:@"อุทยานแห่งชาติ"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item2 = [[FCVerticalMenuItem alloc] initWithTitle:@"เขตรักษาพันธุ์สัตว์ป่า"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item3 = [[FCVerticalMenuItem alloc] initWithTitle:@"เขตห้ามล่า\nสัตว์ป่า"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item4 = [[FCVerticalMenuItem alloc] initWithTitle:@"วนอุทยาน"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item5 = [[FCVerticalMenuItem alloc] initWithTitle:@"ป่าชายเลน"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item6 = [[FCVerticalMenuItem alloc] initWithTitle:@"พื้นที่คงสภาพป่า\nปี 2555 - 2556"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlayNoPin"]];
+    
+    FCVerticalMenuItem *item7 = [[FCVerticalMenuItem alloc] initWithTitle:@"ขอบเขตจังหวัด"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item8 = [[FCVerticalMenuItem alloc] initWithTitle:@"ขอบเขตอำเภอ"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    FCVerticalMenuItem *item9 = [[FCVerticalMenuItem alloc] initWithTitle:@"สารบัญระวาง\n1 : 50,000"
+                                                             andIconImage:[UIImage imageNamed:@"MLayerOverlay"]];
+    
+    item1.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/NP.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerNP];
+    };
+    item2.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/WLS.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerWLS];
+    };
+    item3.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/NHA.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerNHA];
+    };
+    item4.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/FP.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerFP];
+    };
+    item5.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/MF.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerMF];
+    };
+    item6.actionBlock = ^{
+        [self ForestSelectProvinceMenu];
+    };
+    item7.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/PROVINCE.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerPROVINCE];
+    };
+    item8.actionBlock = ^{
+        [self otherLayer];//[self AmphoeSelectProvinceMenu];
+    };
+    item9.actionBlock = ^{
+        _urlConnect = [NSString stringWithFormat:@"%@/INDEX50000.geojson",kOtherLayerURL];
+        [self otherLayer];//[self layerINDEX];
+    };
+    
+    _verticalMenu = [[FCVerticalMenu alloc] initWithItems:@[item1, item2, item3, item4, item5, item6, item7, item8, item9]];
+    _verticalMenu.appearsBehindNavigationBar = YES;
+}
+
+#pragma mark - FCVerticalMenu Delegate Methods
+
+-(void)menuWillOpen:(FCVerticalMenu *)menu {
+    NSLog(@"menuWillOpen hook");
+}
+
+-(void)menuDidOpen:(FCVerticalMenu *)menu {
+    NSLog(@"menuDidOpen hook");
+}
+
+-(void)menuWillClose:(FCVerticalMenu *)menu {
+    NSLog(@"menuWillClose hook");
+}
+
+-(void)menuDidClose:(FCVerticalMenu *)menu {
+    NSLog(@"menuDidClose hook");
+}
+
+//Menu for Future
+
+    /*[actionSheet addButtonWithTitle:NSLocalizedString(@"+  ชั้นคุณภาพลุ่มนํ้าชั้นที่ 1 และ 2", nil)
+     image:[UIImage imageNamed:nil]
+     type:AHKActionSheetButtonTypeDefault
+     handler:^(AHKActionSheet *as) {
+     [self WatershadSelectProvinceMenu];
+     }];
+     
+     [actionSheet addButtonWithTitle:NSLocalizedString(@"+  ป่าชุมชน", nil)
+     image:[UIImage imageNamed:nil]
+     type:AHKActionSheetButtonTypeDefault
+     handler:^(AHKActionSheet *as) {
+     _urlConnect = [NSString stringWithFormat:@"%@/CommunityForest.geojson",kOtherLayerURL];
+     [self otherLayer];
+     }];*/
+
+    /*[actionSheet addButtonWithTitle:NSLocalizedString(@"+  ขอบเขตตำบล", nil)
+     image:[UIImage imageNamed:nil]
+     type:AHKActionSheetButtonTypeDefault
+     handler:^(AHKActionSheet *as) {
+     _urlConnect = [NSString stringWithFormat:@"%@/CommunityForest.geojson",kOtherLayerURL];
+     [self otherLayer];
+     }];*/
+
+
 
 
 -(void)mainmenu {
@@ -875,7 +1037,12 @@ CLLocationCoordinate2D circleCoordinate;
     btSimpleMenuItem *item2 = [[btSimpleMenuItem alloc]initWithTitle:@"+  Other Layer"
                                                                image:[UIImage imageNamed:@"MLayerOverlay"]
                                                         onCompletion:^(BOOL success, btSimpleMenuItem *item) {
-                                                            [self menuButtons];
+                                                           // [self menuButtons];
+                                                            
+                                                            if (_verticalMenu.isOpen)
+                                                                return [_verticalMenu dismissWithCompletionBlock:nil];
+                                                            
+                                                            [_verticalMenu showFromNavigationBar:self.navigationController.navigationBar inView:self.view];
                                                         }];
     
     btSimpleMenuItem *item3 = [[btSimpleMenuItem alloc]initWithTitle:@"+ Pin"
@@ -939,6 +1106,8 @@ CLLocationCoordinate2D circleCoordinate;
     [sideMenu toggleMenu];
     [self closeTransparentView];
     [self leveyPopListViewDidCancel];
+    
+    [_verticalMenu dismissWithCompletionBlock:nil];
 }
 
 #pragma -mark btSimpleSideMenuDelegate
@@ -1045,7 +1214,7 @@ CLLocationCoordinate2D circleCoordinate;
 }
 
 - (void)warning {
-    /*[[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"แผนที่ดังกล่าว ไม่สามารถใช้เพื่อการอ้างอิงในทางกฏหมายได้ !" andImage:nil andWithType:Message andWithDuration:50.0 inViewController:self atPostion:Top canBeDismissedByUser:NO]];*/
+    /*[[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"แผนที่ดังกล่าว ไม่สามารถใช้เพื่อการอ้างอิงในทางกฏหมายได้ !" andImage:nil andWithType:Message andWithDuration:50.0 inViewController:self atPostion:Center canBeDismissedByUser:NO]];*/
 }
 
 - (void)updateLocations {
@@ -1196,9 +1365,133 @@ CLLocationCoordinate2D circleCoordinate;
     self.elaserAreaButton.hidden = NO;
 }
 
+
+-(void)otherLayer {
+    
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
+    [_mapView addSubview:blurView];
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+    
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    NSURLRequest *request = [NSURLRequest requestWithURL:url];
+    NSLog(@"%@",url);
+    
+    [NSURLConnection sendAsynchronousRequest:request
+                                       queue:[NSOperationQueue mainQueue]
+                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+                               
+                               if ([data length] >0 && error == nil)
+                               {
+                                   NSDictionary *geoJSON = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                                   
+                                   NSArray *shapes = [OtherLayerGeoJSONSerialization shapesFromGeoJSONFeatureCollection:geoJSON error:nil];
+                                   
+                                   NSLog(@"%@",shapes);
+                                   for (MKShape *shape in shapes) {
+                                       
+                                       if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+                                           
+                                           [_mapView addOverlay:(id <MKOverlay>)shape];
+                                           
+                                           OtherLayerAnnotation *annotation = [[OtherLayerAnnotation alloc] init];
+                                           
+                                           annotation.title = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+                                           annotation.subtitle = [NSString stringWithFormat:@"%@ / %@ / จ.%@", [[shape.title componentsSeparatedByString:@","] objectAtIndex:5],[[shape.title componentsSeparatedByString:@","] objectAtIndex:0], [[shape.title componentsSeparatedByString:@","] objectAtIndex:2]];
+                                           
+                                           annotation.nameThai = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+                                           annotation.province = [[shape.title componentsSeparatedByString:@","] objectAtIndex:2];
+                                           annotation.code = [[shape.title componentsSeparatedByString:@","] objectAtIndex:5];
+                                           annotation.type = [[shape.title componentsSeparatedByString:@","] objectAtIndex:0];
+                                           
+                                           annotation.polygon = shape.subtitle;
+                                           
+                                           annotation.coordinate = CLLocationCoordinate2DMake([[[shape.title componentsSeparatedByString:@","] objectAtIndex:3] doubleValue], [[[shape.title componentsSeparatedByString:@","] objectAtIndex:4] doubleValue]);
+                                           
+                                           [self.qTree insertObject:annotation];
+                                           [self reloadAnnotations];
+                                       }
+                                   }
+                                   
+                                   for (OtherLayerAnnotation *shape in shapes) {
+                                       
+                                       if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+                                           
+                                       } else {
+                                           
+                                           [_mapView addAnnotation:shape];
+                                           
+                                           [self.qTree insertObject:shape];
+                                           [self reloadAnnotations];
+                                           
+                                           NSArray *array = shape.multiPolygon;
+                                           
+                                           if ([array conformsToProtocol:@protocol(MKOverlay)]) {
+                                               
+                                           } else {
+                                               NSString *jsonString = [array componentsJoinedByString:@","];
+                                               
+                                               for (jsonString in array) {
+                                                   
+                                                   NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+                                                   NSDictionary *geometry = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                                                   
+                                                   NSDictionary *subFeature = [NSDictionary dictionaryWithDictionary:geometry[@"geometry"]];
+                                                   
+                                                   NSArray *coordinateSets = subFeature[@"coordinates"];
+                                                   
+                                                   NSMutableArray *mutablePolygons = [NSMutableArray arrayWithCapacity:[coordinateSets count]];
+                                                   for (NSArray *coordinatePairs in coordinateSets) {
+                                                       CLLocationCoordinate2D *polygonCoordinates = CLLocationCoordinatesFromCoordinatePairs(coordinatePairs);
+                                                       MKPolygon *polygon = [MKPolygon polygonWithCoordinates:polygonCoordinates count:[coordinatePairs count]];
+                                                       [mutablePolygons addObject:polygon];
+                                                   }
+                                                   
+                                                   MKPolygon *polygon = nil;
+                                                   switch ([mutablePolygons count]) {
+                                                       case 0:
+                                                           
+                                                       case 1:
+                                                           polygon = [mutablePolygons firstObject];
+                                                           break;
+                                                       default: {
+                                                           MKPolygon *exteriorPolygon = [mutablePolygons firstObject];
+                                                           NSArray *interiorPolygons = [mutablePolygons subarrayWithRange:NSMakeRange(1, [mutablePolygons count] - 1)];
+                                                           polygon = [MKPolygon polygonWithPoints:exteriorPolygon.points count:exteriorPolygon.pointCount interiorPolygons:interiorPolygons];
+                                                       }
+                                                           break;
+                                                   }
+                                                   polygon.title = shape.type;
+                                                   
+                                                   [_mapView addOverlay:polygon];
+                                               }
+                                           }
+                                       }
+                                   }
+                                   [self setMapRegion];
+                                   
+                                   [self DownloadSuccess];
+                               } else if ([data length] == 0 && error == nil) {
+                                   NSLog(@"Nothing was downloaded.");
+                                   [self NothingWasDownload];
+                               } else if (error != nil) {
+                                   NSLog(@"Error = %@", error);
+                                   [self Disconnected];
+                               }
+                           }];
+}
+
 -(void)layer {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -1314,7 +1607,7 @@ CLLocationCoordinate2D circleCoordinate;
             }
         }
     }
-                                  /* NSArray *pole = [_mapView overlays];
+                           /*        NSArray *pole = [_mapView overlays];
                                    
                                    NSArray *area = [_mapView annotations];
                                    
@@ -1351,10 +1644,249 @@ CLLocationCoordinate2D circleCoordinate;
                                    [self Disconnected];
                                }
                            }];
+
+   /* self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectNRF = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];*/
 }
+
+/*------------------- Edit Progress -------------------
+-(void)layerNP {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectNP = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerWLS {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectWLS = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerNHA {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectNHA = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerFP {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectFP = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerMF {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectMF = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerWATERSHAD {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectWATERSHAD = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerFOREST55_56 {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectFOREST55_56 = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerTAMBON {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectTAMBON = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerAMPHOE {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectAMPHOE = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerPROVINCE {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectPROVINCE = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerINDEX {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectINDEX = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+-(void)layerCOMMUNITYFOREST {
+    self.navigationItem.leftBarButtonItem.enabled = NO;
+    _mapChageButton.enabled = NO;
+    _listChageButton.enabled = NO;
+    
+    [self setTitle:@"Please Wait..."];
+    
+    if (self.qTree == nil) {
+        self.qTree = [QTree new];
+    } else {
+        
+    }
+
+    NSURL *url = [NSURL URLWithString:_urlConnect];
+    layerConnectCOMMUNITYFOREST = [NSURLConnection connectionWithRequest:[NSURLRequest requestWithURL:url] delegate:self];
+    
+    [_mapView addSubview:self.progressView];
+}
+
+----------------- Close Edit Progress -----------------*/
+
+
 -(void)DownloadSuccess {
     
-    [_progressView stopAnimating];
+    [_IndeterminateProgressView stopAnimating];
     [self setTitle:@"Map"];//---[self hideLoadingMode];
     
     [blurView removeFromSuperview];
@@ -1364,14 +1896,14 @@ CLLocationCoordinate2D circleCoordinate;
     _listChageButton.enabled = YES;
     self.elaserAreaButton.hidden = NO;
     
-    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
 }
 -(void)NothingWasDownload {
     
     /*UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Nothing was downloaded.", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
     [alertView show];*/
     
-    [_progressView stopAnimating];
+    [_IndeterminateProgressView stopAnimating];
     [self setTitle:@"Map"];//---[self hideLoadingMode];
     
     [blurView removeFromSuperview];
@@ -1380,13 +1912,13 @@ CLLocationCoordinate2D circleCoordinate;
     _mapChageButton.enabled = YES;
     _listChageButton.enabled = YES;
     
-    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Data fail" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Data fail" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
 }
 -(void)Disconnected {
     /*UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Disconnected", nil) message:nil delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil, nil];
     [alertView show];*/
     
-    [_progressView stopAnimating];
+    [_IndeterminateProgressView stopAnimating];
     [self setTitle:@"Map"];//---[self hideLoadingMode];
     
     [blurView removeFromSuperview];
@@ -1395,8 +1927,305 @@ CLLocationCoordinate2D circleCoordinate;
     _mapChageButton.enabled = YES;
     _listChageButton.enabled = YES;
     
-    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Disconnected" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Disconnected" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
 }
+
+
+
+/*-------------- Edit Progress----------------
+#pragma mark -
+
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
+    //self.expectedBytes = response.expectedContentLength;
+
+    if ([response expectedContentLength] == NSURLResponseUnknownLength) {
+        
+        // unknown content size
+        self.data = [[NSMutableData alloc] initWithCapacity:10];
+    } else {
+        
+        self.expectedBytes = response.expectedContentLength;
+
+        NSLog(@"expected = %f",self.expectedBytes);
+        self.data = [NSMutableData dataWithCapacity:self.expectedBytes];
+    }
+    self.progressView.progress = 0.0;
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+    
+  //  if (data == nil) {
+   //     data = [[NSMutableData alloc] initWithCapacity:self.expectedBytes];
+   // }
+ 
+    [self.data appendData:data];
+    
+    NSLog(@"self.data length = %lu",(unsigned long)self.data.length);
+    NSLog(@"data length = %lu",(unsigned long)data.length);
+
+    float receivedBytes = self.data.length;
+    
+    if (self.expectedBytes < 1) {
+        if (connection == layerConnectNRF) {
+            self.progressView.progress = receivedBytes / 10000000;
+            NSLog(@"layerConnect");
+        } else if (connection == layerConnectNP) {
+            self.progressView.progress = receivedBytes / 17355403;
+            NSLog(@"otherLayerConnectNP");
+        } else if (connection == layerConnectWLS) {
+            self.progressView.progress = receivedBytes / 12375341;
+            NSLog(@"otherLayerConnectWLS");
+        } else if (connection == layerConnectNHA) {
+            self.progressView.progress = receivedBytes / 2997918;
+            NSLog(@"otherLayerConnectNHA");
+        } else if (connection == layerConnectFP) {
+            self.progressView.progress = receivedBytes / 539140;
+            NSLog(@"otherLayerConnectFP");
+        } else if (connection == layerConnectMF) {
+            self.progressView.progress = receivedBytes / 19495430;
+            NSLog(@"otherLayerConnectMF");
+        } else if (connection == layerConnectWATERSHAD) {
+            self.progressView.progress = receivedBytes / 10000000;
+            NSLog(@"otherLayerConnectWATERSHAD");
+        } else if (connection == layerConnectFOREST55_56) {
+            self.progressView.progress = receivedBytes / 35742256;
+            NSLog(@"otherLayerConnectFOREST55_56");
+        } else if (connection == layerConnectTAMBON) {
+            self.progressView.progress = receivedBytes / 10000000;
+            NSLog(@"otherLayerConnectTAMBON");
+        } else if (connection == layerConnectAMPHOE) {
+            self.progressView.progress = receivedBytes / 951180;
+            NSLog(@"otherLayerConnectAMPHOE");
+        } else if (connection == layerConnectPROVINCE) {
+            self.progressView.progress = receivedBytes / 40000000;
+            NSLog(@"otherLayerConnectPROVINCE");
+        } else if (connection == layerConnectINDEX) {
+            self.progressView.progress = receivedBytes / 448358;
+            NSLog(@"otherLayerConnectINDEX");
+        } else if (connection == layerConnectCOMMUNITYFOREST) {
+            self.progressView.progress = receivedBytes / 13000000;
+            NSLog(@"otherLayerConnectCOMMUNITYFOREST");
+        } else {
+            self.progressView.progress = receivedBytes / 20000000;
+            NSLog(@"otherLayerConnect");
+        }
+        
+    } else {
+        self.progressView.progress = receivedBytes / self.expectedBytes;
+    }
+    
+    NSLog(@"received / expected = %f",receivedBytes / self.expectedBytes);
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
+ 
+    if (connection == layerConnectNRF) {
+        NSLog(@"layerConnectNRF Overlay");
+        [self overlayLayer];
+    } else {
+        NSLog(@"OtherLayerConnect Overlay");
+        [self overlayOtherLayer];
+    }
+
+    self.progressView.progress = 1.0;
+    [self.progressView removeFromSuperview];
+    
+    [self setMapRegion];
+    [self DownloadSuccess];
+}
+
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
+    self.progressView.progress = 1.0;
+    [self.progressView removeFromSuperview];
+    
+    NSLog(@"Error = %@", error);
+    [self Disconnected];
+}
+
+-(void)overlayLayer {
+    NSDictionary *geoJSON = [NSJSONSerialization JSONObjectWithData:self.data options:0 error:nil];
+    
+    NSArray *shapes = [GeoJSONSerialization shapesFromGeoJSONFeatureCollection:geoJSON error:nil];
+    
+    NSLog(@"%@",shapes);
+    for (MKShape *shape in shapes) {
+        
+        if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+            
+            [_mapView addOverlay:(id <MKOverlay>)shape];
+            
+            Annotation *annotation = [[Annotation alloc] init];
+            
+            annotation.title = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+            annotation.subtitle = [NSString stringWithFormat:@"%@ / %@ / จ.%@", [[shape.title componentsSeparatedByString:@","] objectAtIndex:6],[[shape.title componentsSeparatedByString:@","] objectAtIndex:0], [[shape.title componentsSeparatedByString:@","] objectAtIndex:3]];
+            
+            annotation.nameThai = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+            annotation.province = [[shape.title componentsSeparatedByString:@","] objectAtIndex:3];
+            annotation.code = [[shape.title componentsSeparatedByString:@","] objectAtIndex:6];
+            annotation.nameEng = [[shape.title componentsSeparatedByString:@","] objectAtIndex:2];
+            annotation.type = [[shape.title componentsSeparatedByString:@","] objectAtIndex:0];
+            
+            annotation.polygon = shape.subtitle;
+            
+            annotation.coordinate = CLLocationCoordinate2DMake([[[shape.title componentsSeparatedByString:@","] objectAtIndex:4] doubleValue], [[[shape.title componentsSeparatedByString:@","] objectAtIndex:5] doubleValue]);
+            
+            [__areas addObject:annotation];
+            [self.qTree insertObject:annotation];
+            [self reloadAnnotations];
+            __listViewController.areas = __areas;
+        }
+    }
+    
+    for (Annotation *shape in shapes) {
+        
+        if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+            
+        } else {
+            
+            [_mapView addAnnotation:shape];
+            
+            [__areas addObject:shape];
+            [self.qTree insertObject:shape];
+            [self reloadAnnotations];
+            __listViewController.areas = __areas;
+            
+            NSArray *array = shape.multiPolygon;
+            
+            if ([array conformsToProtocol:@protocol(MKOverlay)]) {
+                
+            } else {
+                NSString *jsonString = [array componentsJoinedByString:@","];
+                
+                for (jsonString in array) {
+                    
+                    NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+                    NSDictionary *geometry = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    
+                    NSDictionary *subFeature = [NSDictionary dictionaryWithDictionary:geometry[@"geometry"]];
+                    
+                    NSArray *coordinateSets = subFeature[@"coordinates"];
+                    
+                    NSMutableArray *mutablePolygons = [NSMutableArray arrayWithCapacity:[coordinateSets count]];
+                    for (NSArray *coordinatePairs in coordinateSets) {
+                        CLLocationCoordinate2D *polygonCoordinates = CLLocationCoordinatesFromCoordinatePairs(coordinatePairs);
+                        MKPolygon *polygon = [MKPolygon polygonWithCoordinates:polygonCoordinates count:[coordinatePairs count]];
+                        [mutablePolygons addObject:polygon];
+                    }
+                    
+                    MKPolygon *polygon = nil;
+                    switch ([mutablePolygons count]) {
+                        case 0:
+                        
+                        case 1:
+                        polygon = [mutablePolygons firstObject];
+                        break;
+                        default: {
+                            MKPolygon *exteriorPolygon = [mutablePolygons firstObject];
+                            NSArray *interiorPolygons = [mutablePolygons subarrayWithRange:NSMakeRange(1, [mutablePolygons count] - 1)];
+                            polygon = [MKPolygon polygonWithPoints:exteriorPolygon.points count:exteriorPolygon.pointCount interiorPolygons:interiorPolygons];
+                        }
+                        break;
+                    }
+                    polygon.title = shape.type;
+                    
+                    [_mapView addOverlay:polygon];
+                }
+            }
+        }
+    }
+    self.SwitchContainer.hidden = NO;
+}
+-(void)overlayOtherLayer {
+
+    NSDictionary *geoJSON = [NSJSONSerialization JSONObjectWithData:self.data options:0 error:nil];
+    
+    NSArray *shapes = [OtherLayerGeoJSONSerialization shapesFromGeoJSONFeatureCollection:geoJSON error:nil];
+    
+    NSLog(@"%@",shapes);
+    for (MKShape *shape in shapes) {
+        
+        if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+            
+            [_mapView addOverlay:(id <MKOverlay>)shape];
+            
+            OtherLayerAnnotation *annotation = [[OtherLayerAnnotation alloc] init];
+            
+            annotation.title = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+            annotation.subtitle = [NSString stringWithFormat:@"%@ / %@ / จ.%@", [[shape.title componentsSeparatedByString:@","] objectAtIndex:5],[[shape.title componentsSeparatedByString:@","] objectAtIndex:0], [[shape.title componentsSeparatedByString:@","] objectAtIndex:2]];
+            
+            annotation.nameThai = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
+            annotation.province = [[shape.title componentsSeparatedByString:@","] objectAtIndex:2];
+            annotation.code = [[shape.title componentsSeparatedByString:@","] objectAtIndex:5];
+            annotation.type = [[shape.title componentsSeparatedByString:@","] objectAtIndex:0];
+            
+            annotation.polygon = shape.subtitle;
+            
+            annotation.coordinate = CLLocationCoordinate2DMake([[[shape.title componentsSeparatedByString:@","] objectAtIndex:3] doubleValue], [[[shape.title componentsSeparatedByString:@","] objectAtIndex:4] doubleValue]);
+            
+            [self.qTree insertObject:annotation];
+            [self reloadAnnotations];
+        }
+    }
+    
+    for (OtherLayerAnnotation *shape in shapes) {
+        
+        if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
+            
+        } else {
+            
+            [_mapView addAnnotation:shape];
+            
+            [self.qTree insertObject:shape];
+            [self reloadAnnotations];
+            
+            NSArray *array = shape.multiPolygon;
+            
+            if ([array conformsToProtocol:@protocol(MKOverlay)]) {
+                
+            } else {
+                NSString *jsonString = [array componentsJoinedByString:@","];
+                
+                for (jsonString in array) {
+                    
+                    NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+                    NSDictionary *geometry = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    
+                    NSDictionary *subFeature = [NSDictionary dictionaryWithDictionary:geometry[@"geometry"]];
+                    
+                    NSArray *coordinateSets = subFeature[@"coordinates"];
+                    
+                    NSMutableArray *mutablePolygons = [NSMutableArray arrayWithCapacity:[coordinateSets count]];
+                    for (NSArray *coordinatePairs in coordinateSets) {
+                        CLLocationCoordinate2D *polygonCoordinates = CLLocationCoordinatesFromCoordinatePairs(coordinatePairs);
+                        MKPolygon *polygon = [MKPolygon polygonWithCoordinates:polygonCoordinates count:[coordinatePairs count]];
+                        [mutablePolygons addObject:polygon];
+                    }
+                    
+                    MKPolygon *polygon = nil;
+                    switch ([mutablePolygons count]) {
+                        case 0:
+                        
+                        case 1:
+                        polygon = [mutablePolygons firstObject];
+                        break;
+                        default: {
+                            MKPolygon *exteriorPolygon = [mutablePolygons firstObject];
+                            NSArray *interiorPolygons = [mutablePolygons subarrayWithRange:NSMakeRange(1, [mutablePolygons count] - 1)];
+                            polygon = [MKPolygon polygonWithPoints:exteriorPolygon.points count:exteriorPolygon.pointCount interiorPolygons:interiorPolygons];
+                        }
+                        break;
+                    }
+                    polygon.title = shape.type;
+                    
+                    [_mapView addOverlay:polygon];
+                }
+            }
+        }
+    }
+}
+
+------- Close Edit progress----------------*/
+
 
 -(void)selectDigitizeFuctions {
     [drawer hideAnimated:YES];
@@ -1616,7 +2445,7 @@ CLLocationCoordinate2D circleCoordinate;
 
 -(void)digitizePointToPolyline {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -1626,12 +2455,12 @@ CLLocationCoordinate2D circleCoordinate;
     if (records.count == 0) {
         [drawer hideAnimated:YES];
         
-        [_progressView stopAnimating];
+        [_IndeterminateProgressView stopAnimating];
         [self setTitle:@"Map"];//---[self hideLoadingMode];
         
         self.navigationItem.leftBarButtonItem.enabled = YES;
         [blurView removeFromSuperview];
-        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
     } else {
         
         records =  [[[MyDatabaseManager sharedManager] allRecordsSortByAttribute:sortingAttribute] mutableCopy];
@@ -1686,7 +2515,7 @@ CLLocationCoordinate2D circleCoordinate;
         
         [drawer hideAnimated:YES];
         
-        [_progressView stopAnimating];
+        [_IndeterminateProgressView stopAnimating];
         [self setTitle:@"Map"];//---[self hideLoadingMode];
         
         self.navigationItem.leftBarButtonItem.enabled = YES;
@@ -1696,14 +2525,14 @@ CLLocationCoordinate2D circleCoordinate;
         [blurView removeFromSuperview];
        
         //Point to Polyline Success
-        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
         [self setMapRegion];
     }
 }
 
 -(void)digitizePointToPolygon {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -1713,7 +2542,7 @@ CLLocationCoordinate2D circleCoordinate;
     if (records.count == 0) {
         [drawer hideAnimated:YES];
         
-        [_progressView stopAnimating];
+        [_IndeterminateProgressView stopAnimating];
         [self setTitle:@"Map"];//---[self hideLoadingMode];
         
         self.navigationItem.leftBarButtonItem.enabled = YES;
@@ -1721,7 +2550,7 @@ CLLocationCoordinate2D circleCoordinate;
         _listChageButton.enabled = YES;
         [blurView removeFromSuperview];
         
-        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"NO Point" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
     } else {
         
         records =  [[[MyDatabaseManager sharedManager] allRecordsSortByAttribute:sortingAttribute] mutableCopy];
@@ -1774,7 +2603,7 @@ CLLocationCoordinate2D circleCoordinate;
         
         [drawer hideAnimated:YES];
         
-        [_progressView stopAnimating];
+        [_IndeterminateProgressView stopAnimating];
         [self setTitle:@"Map"];//---[self hideLoadingMode];
         
         self.navigationItem.leftBarButtonItem.enabled = YES;
@@ -1784,7 +2613,7 @@ CLLocationCoordinate2D circleCoordinate;
         [blurView removeFromSuperview];
         
         //Point to Polygon Success
-        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+        [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
         [self setMapRegion];
     }
 }
@@ -1799,13 +2628,13 @@ CLLocationCoordinate2D circleCoordinate;
     [sideMenu hide];
     
     UIBarButtonItem *flexibleSpace_0 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:self action:nil];
-    UIBarButtonItem *buffer = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_buf_3"] style:UIBarButtonItemStyleBordered target:self action:@selector(bufferZoneAnnotation)];
+    UIBarButtonItem *buffer = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_buf_3"] style:UIBarButtonItemStylePlain target:self action:@selector(bufferZoneAnnotation)];
     UIBarButtonItem *flexibleSpace_1 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:self action:nil];
-    UIBarButtonItem *route = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_routeN"] style:UIBarButtonItemStyleBordered target:self action:@selector(routeDirectionTable)];
+    UIBarButtonItem *route = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_routeN"] style:UIBarButtonItemStylePlain target:self action:@selector(routeDirectionTable)];
     UIBarButtonItem *flexibleSpace_2 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:self action:nil];
-    UIBarButtonItem *detail = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_detail_1"] style:UIBarButtonItemStyleBordered target:self action:@selector(toDetail)];
+    UIBarButtonItem *detail = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"pin_detail_1"] style:UIBarButtonItemStylePlain target:self action:@selector(toDetail)];
     UIBarButtonItem *flexibleSpace_3 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:self action:nil];
-    UIBarButtonItem *cancel = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"btn-close"] style:UIBarButtonItemStyleBordered target:self action:@selector(cancelDrawer)];
+    UIBarButtonItem *cancel = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"btn-close"] style:UIBarButtonItemStylePlain target:self action:@selector(cancelDrawer)];
     UIBarButtonItem *flexibleSpace_4 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:self action:nil];
     
     if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
@@ -2188,7 +3017,7 @@ CLLocationCoordinate2D circleCoordinate;
         if (error) {
             NSLog(@"There was an error getting your directions");
           
-            [_progressView stopAnimating];
+            [_IndeterminateProgressView stopAnimating];
             [self setTitle:@"Map"];//---[self hideLoadingMode];
             
             [blurView removeFromSuperview];
@@ -2196,7 +3025,7 @@ CLLocationCoordinate2D circleCoordinate;
             _mapChageButton.enabled = YES;
             _listChageButton.enabled = YES;
             
-            [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Error" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+            [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Error" andImage:nil andWithType:Error andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
             
             [self closeTransparentView];
             return;
@@ -2209,7 +3038,7 @@ CLLocationCoordinate2D circleCoordinate;
 
 - (void)findDirectionBetweenCurrent_Pin {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -2241,7 +3070,7 @@ CLLocationCoordinate2D circleCoordinate;
 
 - (void)findDirectionBetweenSearch_Pin {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -2318,7 +3147,7 @@ CLLocationCoordinate2D circleCoordinate;
 }
 - (void)findDirectionBetweenCurrent_Search {
   
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -2376,7 +3205,7 @@ CLLocationCoordinate2D circleCoordinate;
 
 - (void)findDirectionBetweenSearch_Search {
     
-    [_progressView startAnimating];//---[self showLoadingMode];
+    [_IndeterminateProgressView startAnimating];//---[self showLoadingMode];
     [_mapView addSubview:blurView];
     self.navigationItem.leftBarButtonItem.enabled = NO;
     _mapChageButton.enabled = NO;
@@ -2486,7 +3315,7 @@ CLLocationCoordinate2D circleCoordinate;
     
     [_transparentView close];
     
-    [_progressView stopAnimating];
+    [_IndeterminateProgressView stopAnimating];
     [self setTitle:@"Map"];//---[self hideLoadingMode];
     
     self.navigationItem.leftBarButtonItem.enabled = YES;
@@ -2494,7 +3323,7 @@ CLLocationCoordinate2D circleCoordinate;
     _listChageButton.enabled = YES;
     [blurView removeFromSuperview];
     
-    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Top canBeDismissedByUser:NO]];
+    [[GoogleWearAlertObjc getInstance]prepareNotificationToBeShown:[[GoogleWearAlertViewObjc alloc]initWithTitle:@"Success" andImage:nil andWithType:Success andWithDuration:2.5 inViewController:self atPostion:Center canBeDismissedByUser:NO]];
     
     _routeDistance.text = [NSString stringWithFormat:@"%0.1f km",_currentRoute.distance / 1000.0];
     self.routeDistance.hidden = NO;
@@ -2531,7 +3360,7 @@ CLLocationCoordinate2D circleCoordinate;
         controller.route = _currentRoute;
         controller.modalInPopover = NO;
         
-        [controller.navigationItem setRightBarButtonItem:[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"btn-close"] style:UIBarButtonItemStyleBordered target:self action:@selector(close:)]];
+        [controller.navigationItem setRightBarButtonItem:[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"btn-close"] style:UIBarButtonItemStylePlain target:self action:@selector(close:)]];
         
         UINavigationController *contentViewController = [[UINavigationController alloc] initWithRootViewController:controller];
         
@@ -4989,237 +5818,6 @@ CLLocationCoordinate2D circleCoordinate;
     }
 }
 
--(void)menuButtons {
-    [self closeTransparentView];
-    [drawer hideAnimated:YES];
-
-    AHKActionSheet *actionSheet = [[AHKActionSheet alloc] initWithTitle:NSLocalizedString(@"Other Layer", nil)];
-   
-    /*[actionSheet addButtonWithTitle:NSLocalizedString(@"+  หน่วยป้องกันรักษาป่า", nil)
-     image:[UIImage imageNamed:nil]
-     type:AHKActionSheetButtonTypeDefault
-     handler:^(AHKActionSheet *as) {
-     _urlConnect = @"http://pirun.ku.ac.th/~b521030091/forestProtectCenter.geojson";
-     [self layer];
-     }];*/
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"อุทยานแห่งชาติ", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/NP.geojson",kOtherLayerURL];
-                                 [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"เขตรักษาพันธุ์สัตว์ป่า", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/WLS.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"เขตห้ามล่าสัตว์ป่า", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/NHA.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"วนอุทยาน", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/FP.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"ป่าชายเลน", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/MF.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"พื้นที่คงสภาพป่า ปี 2555 - 2556", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlayNoPin"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                [self ForestSelectProvinceMenu];
-                            }];
-    
-    /*[actionSheet addButtonWithTitle:NSLocalizedString(@"+  ชั้นคุณภาพลุ่มนํ้าชั้นที่ 1 และ 2", nil)
-                              image:[UIImage imageNamed:nil]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                [self WatershadSelectProvinceMenu];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"+  ป่าชุมชน", nil)
-                              image:[UIImage imageNamed:nil]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/CommunityForest.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];*/
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"ขอบเขตจังหวัด", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/PROVINCE.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"ขอบเขตอำเภอ ", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                [self AmphoeSelectProvinceMenu];
-                            }];
-    
-    /*[actionSheet addButtonWithTitle:NSLocalizedString(@"+  ขอบเขตตำบล", nil)
-                              image:[UIImage imageNamed:nil]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/CommunityForest.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];*/
-    
-    [actionSheet addButtonWithTitle:NSLocalizedString(@"สารบัญระวาง 1 : 50,000", nil)
-                              image:[UIImage imageNamed:@"MLayerOverlay"]
-                               type:AHKActionSheetButtonTypeDefault
-                            handler:^(AHKActionSheet *as) {
-                                _urlConnect = [NSString stringWithFormat:@"%@/INDEX50000.geojson",kOtherLayerURL];
-                                [self otherLayer];
-                            }];
-    [actionSheet show];
-}
-
--(void)otherLayer {
-    
-    [_progressView startAnimating];//---[self showLoadingMode];
-    [_mapView addSubview:blurView];
-    self.navigationItem.leftBarButtonItem.enabled = NO;
-    _mapChageButton.enabled = NO;
-    _listChageButton.enabled = NO;
-    [self setTitle:@"Please Wait..."];
-    
-    if (self.qTree == nil) {
-        self.qTree = [QTree new];
-    } else {
-        
-    }
-
-    NSURL *url = [NSURL URLWithString:_urlConnect];
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    NSLog(@"%@",url);
-    
-    [NSURLConnection sendAsynchronousRequest:request
-                                       queue:[NSOperationQueue mainQueue]
-                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-                               
-                               if ([data length] >0 && error == nil)
-                               {
-                                   NSDictionary *geoJSON = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-                                   
-                                   NSArray *shapes = [OtherLayerGeoJSONSerialization shapesFromGeoJSONFeatureCollection:geoJSON error:nil];
-                                   
-                                   NSLog(@"%@",shapes);
-                                   for (MKShape *shape in shapes) {
-                                       
-                                       if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
-                                           
-                                           [_mapView addOverlay:(id <MKOverlay>)shape];
-                                           
-                                           OtherLayerAnnotation *annotation = [[OtherLayerAnnotation alloc] init];
-                                           
-                                           annotation.title = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
-                                           annotation.subtitle = [NSString stringWithFormat:@"%@ / %@ / จ.%@", [[shape.title componentsSeparatedByString:@","] objectAtIndex:5],[[shape.title componentsSeparatedByString:@","] objectAtIndex:0], [[shape.title componentsSeparatedByString:@","] objectAtIndex:2]];
-                                           
-                                           annotation.nameThai = [[shape.title componentsSeparatedByString:@","] objectAtIndex:1];
-                                           annotation.province = [[shape.title componentsSeparatedByString:@","] objectAtIndex:2];
-                                           annotation.code = [[shape.title componentsSeparatedByString:@","] objectAtIndex:5];
-                                           annotation.type = [[shape.title componentsSeparatedByString:@","] objectAtIndex:0];
-                                           
-                                           annotation.polygon = shape.subtitle;
-                                           
-                                           annotation.coordinate = CLLocationCoordinate2DMake([[[shape.title componentsSeparatedByString:@","] objectAtIndex:3] doubleValue], [[[shape.title componentsSeparatedByString:@","] objectAtIndex:4] doubleValue]);
-                                           
-                                           [self.qTree insertObject:annotation];
-                                           [self reloadAnnotations];
-                                       }
-                                   }
-                                   
-                                   for (OtherLayerAnnotation *shape in shapes) {
-                                       
-                                       if ([shape conformsToProtocol:@protocol(MKOverlay)]) {
-                                           
-                                       } else {
-                                           
-                                           [_mapView addAnnotation:shape];
-                                           
-                                           [self.qTree insertObject:shape];
-                                           [self reloadAnnotations];
-                                           
-                                           NSArray *array = shape.multiPolygon;
-                                           
-                                           if ([array conformsToProtocol:@protocol(MKOverlay)]) {
-                                               
-                                           } else {
-                                               NSString *jsonString = [array componentsJoinedByString:@","];
-                                               
-                                               for (jsonString in array) {
-                                                   
-                                                   NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
-                                                   NSDictionary *geometry = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-                                                   
-                                                   NSDictionary *subFeature = [NSDictionary dictionaryWithDictionary:geometry[@"geometry"]];
-                                                   
-                                                   NSArray *coordinateSets = subFeature[@"coordinates"];
-                                                   
-                                                   NSMutableArray *mutablePolygons = [NSMutableArray arrayWithCapacity:[coordinateSets count]];
-                                                   for (NSArray *coordinatePairs in coordinateSets) {
-                                                       CLLocationCoordinate2D *polygonCoordinates = CLLocationCoordinatesFromCoordinatePairs(coordinatePairs);
-                                                       MKPolygon *polygon = [MKPolygon polygonWithCoordinates:polygonCoordinates count:[coordinatePairs count]];
-                                                       [mutablePolygons addObject:polygon];
-                                                   }
-                                                   
-                                                   MKPolygon *polygon = nil;
-                                                   switch ([mutablePolygons count]) {
-                                                       case 0:
-                                                           
-                                                       case 1:
-                                                           polygon = [mutablePolygons firstObject];
-                                                           break;
-                                                       default: {
-                                                           MKPolygon *exteriorPolygon = [mutablePolygons firstObject];
-                                                           NSArray *interiorPolygons = [mutablePolygons subarrayWithRange:NSMakeRange(1, [mutablePolygons count] - 1)];
-                                                           polygon = [MKPolygon polygonWithPoints:exteriorPolygon.points count:exteriorPolygon.pointCount interiorPolygons:interiorPolygons];
-                                                       }
-                                                           break;
-                                                   }
-                                                   polygon.title = shape.type;
-                                                   
-                                                   [_mapView addOverlay:polygon];
-                                               }
-                                           }
-                                       }
-                                   }
-                                   [self setMapRegion];
-                                   
-                                   [self DownloadSuccess];
-                               } else if ([data length] == 0 && error == nil) {
-                                   NSLog(@"Nothing was downloaded.");
-                                   [self NothingWasDownload];
-                               } else if (error != nil) {
-                                   NSLog(@"Error = %@", error);
-                                   [self Disconnected];
-                               }
-                           }];
-}
 
 - (void)NRFselectProvinceMenu {
     
@@ -6026,226 +6624,226 @@ CLLocationCoordinate2D circleCoordinate;
     }
     //--------------------------------------------- Watershad
     if (layer == LAYER_OPTIONS_WATERSHAD) {
-        if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kWatershadURL]; [self otherLayer]; }
+        if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
         else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชัยภูมิ"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChaiyaphumProvince.geojson",kWatershadURL]; [self  otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kWatershadURL]; [self otherLayer]; }
-        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kWatershadURL]; [self otherLayer]; }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
+        else if ([[[_optionsWatershad objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ชั้นคุณภาพลุ่มน้ำ  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kWatershadURL]; [self otherLayer];/*[self layerWATERSHAD]; */ }
     }
     //------------------------------Forest55-56
     if (layer == LAYER_OPTIONS_FOREST) {
-        if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  กรุงเทพมหานคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/BangKokProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชัยภูมิ"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChaiyaphumProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.มหาสารคาม"]) { _urlConnect = [NSString stringWithFormat:@"%@/MahaSarakhamProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรปราการ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutPrakanProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรสงคราม"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSongkhramProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรสาคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSakhonProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kForestURL]; [self otherLayer]; }
-        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kForestURL]; [self otherLayer]; }
+        if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  กรุงเทพมหานคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/BangKokProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชัยภูมิ"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChaiyaphumProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.มหาสารคาม"]) { _urlConnect = [NSString stringWithFormat:@"%@/MahaSarakhamProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรปราการ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutPrakanProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรสงคราม"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSongkhramProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สมุทรสาคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSakhonProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
+        else if ([[[_optionsForest objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  พื้นที่คงสภาพป่า  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kForestURL]; [self otherLayer];/*[self layerFOREST55_56]; */ }
     }
     //------------------------------Amphoe
     if (layer == LAYER_OPTIONS_AMPHOE) {
-        if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กรุงเทพมหานคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/BangKokProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชัยภูมิ"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChaiyaphumProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครปฐม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPathomProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นนทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/NonthaburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปทุมธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PathumThaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พระนครศรีอยุธยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraNakhonSiAyutthayaProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.มหาสารคาม"]) { _urlConnect = [NSString stringWithFormat:@"%@/MahaSarakhamProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรปราการ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutPrakanProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรสงคราม"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSongkhramProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรสาคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSakhonProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สิงห์บุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SingBuriProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อ่างทอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/AngThongProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
-        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kAmphoeURL]; [self otherLayer]; }
+        if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กระบี่"]) { _urlConnect = [NSString stringWithFormat:@"%@/KrabiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กรุงเทพมหานคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/BangKokProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กาญจนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/KanchanaburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กาฬสินธุ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/KalasinProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.กำแพงเพชร"]) { _urlConnect = [NSString stringWithFormat:@"%@/KamphaengPhetProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ขอนแก่น"]) { _urlConnect = [NSString stringWithFormat:@"%@/KhonKaenProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.จันทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChanthaburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ฉะเชิงเทรา"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChachoengsaoProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชลบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChonburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชัยนาท"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChainatProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชัยภูมิ"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChaiyaphumProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ชุมพร"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChumphonProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เชียงราย"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangMaiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เชียงใหม่"]) { _urlConnect = [NSString stringWithFormat:@"%@/ChiangRaiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตรัง"]) { _urlConnect = [NSString stringWithFormat:@"%@/TrangProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตราด"]) { _urlConnect = [NSString stringWithFormat:@"%@/TratProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ตาก"]) { _urlConnect = [NSString stringWithFormat:@"%@/TakProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครนายก"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonNayokProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครปฐม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPathomProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครพนม"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonPhanomProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครราชสีมา"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonRatchasimaProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครศรีธรรมราช"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSiThammaratProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นครสวรรค์"]) { _urlConnect = [NSString stringWithFormat:@"%@/NakhonSawanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นนทบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/NonthaburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.นราธิวาส"]) { _urlConnect = [NSString stringWithFormat:@"%@/NarathiwatProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.น่าน"]) { _urlConnect = [NSString stringWithFormat:@"%@/NanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.บึงกาฬ"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuengKanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.บุรีรัมย์"]) { _urlConnect = [NSString stringWithFormat:@"%@/BuriramProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปทุมธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PathumThaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ประจวบคีรีขันธ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachuapKhiriKhanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปราจีนบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PrachinburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ปัตตานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PattaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พระนครศรีอยุธยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraNakhonSiAyutthayaProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พะเยา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhayaoProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พังงา"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhangNgaProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พัทลุง"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhatthalungProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พิจิตร"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhichitProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.พิษณุโลก"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhitsanulokProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เพชรบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchaburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เพชรบูรณ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhetchabunProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.แพร่"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhraeProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ภูเก็ต"]) { _urlConnect = [NSString stringWithFormat:@"%@/PhuketProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.มหาสารคาม"]) { _urlConnect = [NSString stringWithFormat:@"%@/MahaSarakhamProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.มุกดาหาร"]) { _urlConnect = [NSString stringWithFormat:@"%@/MukdahanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.แม่ฮ่องสอน"]) { _urlConnect = [NSString stringWithFormat:@"%@/MaeHongSonProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ยโสธร"]) { _urlConnect = [NSString stringWithFormat:@"%@/YasothonProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ยะลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/YalaProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ร้อยเอ็ด"]) { _urlConnect = [NSString stringWithFormat:@"%@/RoiEtProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ระนอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RanongProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ระยอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/RayongProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ราชบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/RatchaburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลพบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/LopburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลำปาง"]) { _urlConnect = [NSString stringWithFormat:@"%@/LampangProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ลำพูน"]) { _urlConnect = [NSString stringWithFormat:@"%@/LamphunProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.เลย"]) { _urlConnect = [NSString stringWithFormat:@"%@/LoeiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.ศรีสะเกษ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SisaketProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สกลนคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SakonNakhonProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สงขลา"]) { _urlConnect = [NSString stringWithFormat:@"%@/SongkhlaProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สตูล"]) { _urlConnect = [NSString stringWithFormat:@"%@/SatunProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรปราการ"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutPrakanProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรสงคราม"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSongkhramProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สมุทรสาคร"]) { _urlConnect = [NSString stringWithFormat:@"%@/SamutSakhonProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สระแก้ว"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaKaeoProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สระบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SaraburiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สิงห์บุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SingBuriProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุโขทัย"]) { _urlConnect = [NSString stringWithFormat:@"%@/SukhothaiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุพรรณบุรี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuphanBuriProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุราษฎร์ธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/SuratThaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.สุรินทร์"]) { _urlConnect = [NSString stringWithFormat:@"%@/SurinProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.หนองคาย"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongKhaiProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.หนองบัวลำภู"]) { _urlConnect = [NSString stringWithFormat:@"%@/NongBuaLamphuProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อ่างทอง"]) { _urlConnect = [NSString stringWithFormat:@"%@/AngThongProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อำนาจเจริญ"]) { _urlConnect = [NSString stringWithFormat:@"%@/AmnatCharoenProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุดรธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UdonThaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุตรดิตถ์"]) { _urlConnect = [NSString stringWithFormat:@"%@/UttaraditProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุทัยธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UthaiThaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
+        else if ([[[_optionsAmphoe objectAtIndex:anIndex] objectForKey:@"text"] isEqual: @"+  ขอบเขตอำเภอ  จ.อุบลราชธานี"]) { _urlConnect = [NSString stringWithFormat:@"%@/UbonRatchathaniProvince.geojson",kAmphoeURL]; [self otherLayer];/*[self layerAMPHOE]; */}
     }
 }
 

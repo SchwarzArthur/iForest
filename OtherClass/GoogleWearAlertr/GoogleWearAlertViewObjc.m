@@ -150,7 +150,7 @@ const CGFloat titleLabelHeight = 30;
 
 -(void) positionAlertForPosition:(int)position {
     
-    if UIInterfaceOrientationIsLandscape(UIApplication.sharedApplication.statusBarOrientation) {
+    if (UIInterfaceOrientationIsLandscape (UIApplication.sharedApplication.statusBarOrientation)) {
         
         int centerX = self.viewController.view.frame.size.width/2;
         int centerY = self.viewController.view.frame.size.height/2;

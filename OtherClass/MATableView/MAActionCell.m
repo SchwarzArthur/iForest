@@ -17,10 +17,10 @@
 + (instancetype)actionCellWithTitle:(NSString *)title subtitle:(NSString *)subtitle accessory:(NSString *)accessory action:(dispatch_block_t)action {
     MAActionCell *actionCell = [[MAActionCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     actionCell.textLabel.text = title;
-    actionCell.textLabel.font = [UIFont systemFontOfSize:12];
+    actionCell.textLabel.font = [UIFont systemFontOfSize:11];
     
     actionCell.detailTextLabel.text = subtitle;
-    actionCell.detailTextLabel.font = [UIFont systemFontOfSize:17];
+    actionCell.detailTextLabel.font = [UIFont systemFontOfSize:15];
     actionCell.detailTextLabel.numberOfLines = 0;
     
     if([accessory  isEqual: @"button"]) {

@@ -19,11 +19,12 @@
 #import "btSimpleSideMenu.h"
 #import "AMDraggableBlurView.h"
 #import "GuideViewController.h"
+#import "FCVerticalMenu.h"
 
-#define kForestURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON/FOREST55_56"
-#define kWatershadURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON/WATERSHAD"
-#define kAmphoeURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON/AMPHOE"
-#define kOtherLayerURL @"http://rfdgeoinfo.servebeer.com/NRFApplicationSchwarzKiserz_iOS7/GEOJSON"//http://schwarzarthur.bugs3.com/iForestLayer/
+#define kForestURL @"http://schwarzarthur.bugs3.com/iForestLayer/FOREST55_56"
+#define kWatershadURL @"http://schwarzarthur.bugs3.com/iForestLayer/WATERSHAD"
+#define kAmphoeURL @"http://schwarzarthur.bugs3.com/iForestLayer/AMPHOE"
+#define kOtherLayerURL @"http://schwarzarthur.bugs3.com/iForestLayer/"
 
 typedef enum {
     TBL_CELL_NONE,
@@ -58,12 +59,16 @@ typedef enum {
     
 }LAYER;
 
+
 @class RecordTables;
 
-@interface ViewController : UIViewController <MKMapViewDelegate,CLLocationManagerDelegate,LeveyPopListViewDelegate,UITableViewDataSource, UITableViewDelegate,UIActionSheetDelegate,UIAlertViewDelegate,UISearchBarDelegate,UISearchDisplayDelegate, NSFetchedResultsControllerDelegate,UIImagePickerControllerDelegate,UINavigationControllerDelegate,btSimpleSideMenuDelegate>{
+@interface ViewController : UIViewController <MKMapViewDelegate,CLLocationManagerDelegate,LeveyPopListViewDelegate,UITableViewDataSource, UITableViewDelegate,UIActionSheetDelegate,UIAlertViewDelegate,UISearchBarDelegate,UISearchDisplayDelegate, NSFetchedResultsControllerDelegate,UIImagePickerControllerDelegate,UINavigationControllerDelegate,btSimpleSideMenuDelegate,FCVerticalMenuDelegate>{
 
     MKCircle *circle;
 }
+
+@property (strong, readonly, nonatomic) FCVerticalMenu *verticalMenu;
+
 @property (assign, nonatomic) MKMapType mapType;
 @property (assign, nonatomic) WMMapSource mapSource;
 @property (assign, nonatomic) BOOL useClustering;

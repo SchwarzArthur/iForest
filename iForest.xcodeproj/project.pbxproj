@@ -61,8 +61,12 @@
 		04DACDC819CE250700DD41F2 /* WeatherViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04DACDC719CE250700DD41F2 /* WeatherViewController.m */; };
 		04DACDCB19CFE17600DD41F2 /* ZoningDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04DACDCA19CFE17600DD41F2 /* ZoningDetailViewController.m */; };
 		04DACDCE19D0225900DD41F2 /* SubUseAreaDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04DACDCD19D0225900DD41F2 /* SubUseAreaDetailViewController.m */; };
+		04E7E0261A6CC0510039C19D /* UCZProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 04E7E0251A6CC0510039C19D /* UCZProgressView.m */; };
 		04E9B84918BA5D54003FA23A /* AddAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 04E9B84818BA5D54003FA23A /* AddAnnotation.m */; };
 		04F5F3851859B82E003C97C8 /* PinViewIndex.m in Sources */ = {isa = PBXBuildFile; fileRef = 04F5F3841859B82E003C97C8 /* PinViewIndex.m */; };
+		04F812E21A436B8A0074E575 /* FCVerticalMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 04F812DC1A436B8A0074E575 /* FCVerticalMenu.m */; };
+		04F812E31A436B8A0074E575 /* FCVerticalMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 04F812DE1A436B8A0074E575 /* FCVerticalMenuItem.m */; };
+		04F812E41A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 04F812E01A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.m */; };
 		04F9EA911A00A78B0056A0E9 /* ArrowDown.png in Resources */ = {isa = PBXBuildFile; fileRef = 04F9EA8F1A00A78B0056A0E9 /* ArrowDown.png */; };
 		04F9EA921A00A78B0056A0E9 /* ArrowUp.png in Resources */ = {isa = PBXBuildFile; fileRef = 04F9EA901A00A78B0056A0E9 /* ArrowUp.png */; };
 		04F9EB261A00AC350056A0E9 /* B.png in Resources */ = {isa = PBXBuildFile; fileRef = 04F9EA931A00AC340056A0E9 /* B.png */; };
@@ -312,20 +316,20 @@
 		0473C01618571F2A00FE6C9A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		0473C01818571F2A00FE6C9A /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		0473C01A18571F2A00FE6C9A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		0473C01E18571F2A00FE6C9A /* GeoMap-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoMap-Info.plist"; sourceTree = "<group>"; };
+		0473C01E18571F2A00FE6C9A /* iForest-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "iForest-Info.plist"; sourceTree = "<group>"; };
 		0473C02018571F2A00FE6C9A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0473C02218571F2A00FE6C9A /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		0473C02418571F2A00FE6C9A /* GeoMap-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "GeoMap-Prefix.pch"; sourceTree = "<group>"; };
+		0473C02418571F2A00FE6C9A /* iForest-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iForest-Prefix.pch"; sourceTree = "<group>"; };
 		0473C02518571F2A00FE6C9A /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		0473C02618571F2A00FE6C9A /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		0473C02918571F2A00FE6C9A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main_iPhone.storyboard; sourceTree = "<group>"; };
 		0473C02C18571F2A00FE6C9A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main_iPad.storyboard; sourceTree = "<group>"; };
 		0473C02E18571F2A00FE6C9A /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		0473C02F18571F2A00FE6C9A /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		0473C02F18571F2A00FE6C9A /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = ViewController.m; sourceTree = "<group>"; };
 		0473C03118571F2A00FE6C9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
-		0473C03718571F2A00FE6C9A /* GeoMapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeoMapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0473C03718571F2A00FE6C9A /* iForestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iForestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0473C03818571F2A00FE6C9A /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
-		0473C04018571F2A00FE6C9A /* GeoMapTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoMapTests-Info.plist"; sourceTree = "<group>"; };
+		0473C04018571F2A00FE6C9A /* iForestTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "iForestTests-Info.plist"; sourceTree = "<group>"; };
 		0473C04218571F2A00FE6C9A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0473C04418571F2A00FE6C9A /* GeoMapTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GeoMapTests.m; sourceTree = "<group>"; };
 		0475C01719E7F7B3000E9CB0 /* PinViewNP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PinViewNP.h; sourceTree = "<group>"; };
@@ -379,10 +383,18 @@
 		04DACDCA19CFE17600DD41F2 /* ZoningDetailViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZoningDetailViewController.m; sourceTree = "<group>"; };
 		04DACDCC19D0225900DD41F2 /* SubUseAreaDetailViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SubUseAreaDetailViewController.h; sourceTree = "<group>"; };
 		04DACDCD19D0225900DD41F2 /* SubUseAreaDetailViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SubUseAreaDetailViewController.m; sourceTree = "<group>"; };
+		04E7E0241A6CC0510039C19D /* UCZProgressView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UCZProgressView.h; sourceTree = "<group>"; };
+		04E7E0251A6CC0510039C19D /* UCZProgressView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UCZProgressView.m; sourceTree = "<group>"; };
 		04E9B84718BA5D54003FA23A /* AddAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AddAnnotation.h; sourceTree = "<group>"; };
 		04E9B84818BA5D54003FA23A /* AddAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AddAnnotation.m; sourceTree = "<group>"; };
 		04F5F3831859B82E003C97C8 /* PinViewIndex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PinViewIndex.h; sourceTree = "<group>"; };
 		04F5F3841859B82E003C97C8 /* PinViewIndex.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PinViewIndex.m; sourceTree = "<group>"; };
+		04F812DB1A436B8A0074E575 /* FCVerticalMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCVerticalMenu.h; sourceTree = "<group>"; };
+		04F812DC1A436B8A0074E575 /* FCVerticalMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCVerticalMenu.m; sourceTree = "<group>"; };
+		04F812DD1A436B8A0074E575 /* FCVerticalMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCVerticalMenuItem.h; sourceTree = "<group>"; };
+		04F812DE1A436B8A0074E575 /* FCVerticalMenuItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCVerticalMenuItem.m; sourceTree = "<group>"; };
+		04F812DF1A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCVerticalMenuItemCollectionViewCell.h; sourceTree = "<group>"; };
+		04F812E01A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCVerticalMenuItemCollectionViewCell.m; sourceTree = "<group>"; };
 		04F9EA8F1A00A78B0056A0E9 /* ArrowDown.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = ArrowDown.png; path = icon/ArrowDown.png; sourceTree = SOURCE_ROOT; };
 		04F9EA901A00A78B0056A0E9 /* ArrowUp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = ArrowUp.png; path = icon/ArrowUp.png; sourceTree = SOURCE_ROOT; };
 		04F9EA931A00AC340056A0E9 /* B.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = B.png; path = icon/B.png; sourceTree = SOURCE_ROOT; };
@@ -896,7 +908,7 @@
 			isa = PBXGroup;
 			children = (
 				0473C01318571F2A00FE6C9A /* iForest.app */,
-				0473C03718571F2A00FE6C9A /* GeoMapTests.xctest */,
+				0473C03718571F2A00FE6C9A /* iForestTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -944,6 +956,8 @@
 				04F9EC761A00BF930056A0E9 /* IQDatabaseManager */,
 				04F9EC881A00BF930056A0E9 /* IQKeyBoardManager */,
 				04F9EC961A00C01D0056A0E9 /* GSIntermenateProgressView */,
+				04F812D91A436B8A0074E575 /* FCVerticalMenu */,
+				04E7E0231A6CC0510039C19D /* UCZProgress */,
 				0407C63F185B0EF500D2A879 /* ViewController ll ListController */,
 				047E79D6185725DB00D605D0 /* PinView */,
 				0473C03118571F2A00FE6C9A /* Images.xcassets */,
@@ -961,10 +975,10 @@
 		0473C01D18571F2A00FE6C9A /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				0473C01E18571F2A00FE6C9A /* GeoMap-Info.plist */,
+				0473C01E18571F2A00FE6C9A /* iForest-Info.plist */,
 				0473C01F18571F2A00FE6C9A /* InfoPlist.strings */,
 				0473C02218571F2A00FE6C9A /* main.m */,
-				0473C02418571F2A00FE6C9A /* GeoMap-Prefix.pch */,
+				0473C02418571F2A00FE6C9A /* iForest-Prefix.pch */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -981,7 +995,7 @@
 		0473C03F18571F2A00FE6C9A /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				0473C04018571F2A00FE6C9A /* GeoMapTests-Info.plist */,
+				0473C04018571F2A00FE6C9A /* iForestTests-Info.plist */,
 				0473C04118571F2A00FE6C9A /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
@@ -1018,6 +1032,49 @@
 			name = PinView;
 			sourceTree = "<group>";
 		};
+		04B7327C1A0757E900E2CE7D /* image */ = {
+			isa = PBXGroup;
+			children = (
+				04F9EBC61A00BBE90056A0E9 /* IN1@2x.png */,
+				04F9EBC71A00BBE90056A0E9 /* IN2@2x.png */,
+				04F9EBC81A00BBE90056A0E9 /* IN3@2x.png */,
+				04F9EBC91A00BBE90056A0E9 /* IN4@2x.png */,
+				04F9EBCA1A00BBE90056A0E9 /* IN500w1@2x.png */,
+				04F9EBCC1A00BBE90056A0E9 /* IN500w2@2x.png */,
+				04F9EBCE1A00BBE90056A0E9 /* IN500w3@2x.png */,
+				04F9EBD01A00BBE90056A0E9 /* IN500w4@2x.png */,
+				04F9EBD21A00BBE90056A0E9 /* IN500w5@2x.png */,
+				04F9EBD31A00BBE90056A0E9 /* IN5@2x.png */,
+				04F9EBD41A00BBE90056A0E9 /* INBG1.png */,
+				04F9EBD51A00BBE90056A0E9 /* INotherPic.png */,
+			);
+			name = image;
+			sourceTree = "<group>";
+		};
+		04E7E0231A6CC0510039C19D /* UCZProgress */ = {
+			isa = PBXGroup;
+			children = (
+				04E7E0241A6CC0510039C19D /* UCZProgressView.h */,
+				04E7E0251A6CC0510039C19D /* UCZProgressView.m */,
+			);
+			name = UCZProgress;
+			path = OtherClass/UCZProgress;
+			sourceTree = SOURCE_ROOT;
+		};
+		04F812D91A436B8A0074E575 /* FCVerticalMenu */ = {
+			isa = PBXGroup;
+			children = (
+				04F812DB1A436B8A0074E575 /* FCVerticalMenu.h */,
+				04F812DC1A436B8A0074E575 /* FCVerticalMenu.m */,
+				04F812DD1A436B8A0074E575 /* FCVerticalMenuItem.h */,
+				04F812DE1A436B8A0074E575 /* FCVerticalMenuItem.m */,
+				04F812DF1A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.h */,
+				04F812E01A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.m */,
+			);
+			name = FCVerticalMenu;
+			path = OtherClass/FCVerticalMenu;
+			sourceTree = SOURCE_ROOT;
+		};
 		04F9EBB91A00BB830056A0E9 /* MKPolygon+Intersections */ = {
 			isa = PBXGroup;
 			children = (
@@ -1045,18 +1102,7 @@
 				04F9EBC31A00BBE90056A0E9 /* GHWalkThroughPageCell.m */,
 				04F9EBC41A00BBE90056A0E9 /* GHWalkThroughView.h */,
 				04F9EBC51A00BBE90056A0E9 /* GHWalkThroughView.m */,
-				04F9EBC61A00BBE90056A0E9 /* IN1@2x.png */,
-				04F9EBC71A00BBE90056A0E9 /* IN2@2x.png */,
-				04F9EBC81A00BBE90056A0E9 /* IN3@2x.png */,
-				04F9EBC91A00BBE90056A0E9 /* IN4@2x.png */,
-				04F9EBCA1A00BBE90056A0E9 /* IN500w1@2x.png */,
-				04F9EBCC1A00BBE90056A0E9 /* IN500w2@2x.png */,
-				04F9EBCE1A00BBE90056A0E9 /* IN500w3@2x.png */,
-				04F9EBD01A00BBE90056A0E9 /* IN500w4@2x.png */,
-				04F9EBD21A00BBE90056A0E9 /* IN500w5@2x.png */,
-				04F9EBD31A00BBE90056A0E9 /* IN5@2x.png */,
-				04F9EBD41A00BBE90056A0E9 /* INBG1.png */,
-				04F9EBD51A00BBE90056A0E9 /* INotherPic.png */,
+				04B7327C1A0757E900E2CE7D /* image */,
 			);
 			name = GHWalkThrough;
 			path = OtherClass/GHWalkThrough;
@@ -1542,9 +1588,9 @@
 			productReference = 0473C01318571F2A00FE6C9A /* iForest.app */;
 			productType = "com.apple.product-type.application";
 		};
-		0473C03618571F2A00FE6C9A /* GeoMapTests */ = {
+		0473C03618571F2A00FE6C9A /* iForestTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0473C04B18571F2A00FE6C9A /* Build configuration list for PBXNativeTarget "GeoMapTests" */;
+			buildConfigurationList = 0473C04B18571F2A00FE6C9A /* Build configuration list for PBXNativeTarget "iForestTests" */;
 			buildPhases = (
 				0473C03318571F2A00FE6C9A /* Sources */,
 				0473C03418571F2A00FE6C9A /* Frameworks */,
@@ -1555,9 +1601,9 @@
 			dependencies = (
 				0473C03D18571F2A00FE6C9A /* PBXTargetDependency */,
 			);
-			name = GeoMapTests;
+			name = iForestTests;
 			productName = GeoMapTests;
-			productReference = 0473C03718571F2A00FE6C9A /* GeoMapTests.xctest */;
+			productReference = 0473C03718571F2A00FE6C9A /* iForestTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -1577,7 +1623,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 0473C00E18571F2A00FE6C9A /* Build configuration list for PBXProject "GeoMap" */;
+			buildConfigurationList = 0473C00E18571F2A00FE6C9A /* Build configuration list for PBXProject "iForest" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -1591,7 +1637,7 @@
 			projectRoot = "";
 			targets = (
 				0473C01218571F2A00FE6C9A /* iForest */,
-				0473C03618571F2A00FE6C9A /* GeoMapTests */,
+				0473C03618571F2A00FE6C9A /* iForestTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1774,8 +1820,10 @@
 				04AD368C18E52F52009BE8A1 /* DetailDatabaseViewController.m in Sources */,
 				04F9ECFC1A00C3250056A0E9 /* Sys.m in Sources */,
 				0475C01F19E7F7DA000E9CB0 /* PinViewWLS.m in Sources */,
+				04E7E0261A6CC0510039C19D /* UCZProgressView.m in Sources */,
 				04F9EC8D1A00BF930056A0E9 /* IQDatabaseManager.m in Sources */,
 				047E79CF185722BC00D605D0 /* ListViewController.m in Sources */,
+				04F812E21A436B8A0074E575 /* FCVerticalMenu.m in Sources */,
 				04C278FE193EDA8100D0203E /* ItemGuide.m in Sources */,
 				0475C02219E7F7F1000E9CB0 /* PinViewFP.m in Sources */,
 				04F9ECF21A00C3250056A0E9 /* CLLocation+APTimeZones.m in Sources */,
@@ -1836,6 +1884,7 @@
 				04F9ED2E1A00C3C60056A0E9 /* LeveyPopListView.m in Sources */,
 				04F9ED361A00C50D0056A0E9 /* MATableViewSection.m in Sources */,
 				04F9ED251A00C3970056A0E9 /* QCluster.m in Sources */,
+				04F812E31A436B8A0074E575 /* FCVerticalMenuItem.m in Sources */,
 				04F9EBD71A00BBE90056A0E9 /* GHWalkThroughView.m in Sources */,
 				0475C01919E7F7B3000E9CB0 /* PinViewNP.m in Sources */,
 				04F9ECF81A00C3250056A0E9 /* Coord.m in Sources */,
@@ -1845,6 +1894,7 @@
 				04F9EC4E1A00BE750056A0E9 /* UIImage+ImageEffects.m in Sources */,
 				04F9EC751A00BF3E0056A0E9 /* OtherLayerGeoJSONSerialization.m in Sources */,
 				04DACDCE19D0225900DD41F2 /* SubUseAreaDetailViewController.m in Sources */,
+				04F812E41A436B8A0074E575 /* FCVerticalMenuItemCollectionViewCell.m in Sources */,
 				04F9EC671A00BEC20056A0E9 /* PWParallaxScrollView.m in Sources */,
 				04F9ECEA1A00C3250056A0E9 /* AFHTTPSessionManager.m in Sources */,
 				045C56C019E099D700A19653 /* OtherLayerAnnotation.m in Sources */,
@@ -1986,8 +2036,8 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer: Natthanon Chaiyasak (QAP9TP73ME)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Natthanon Chaiyasak (QAP9TP73ME)";
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Natthanon Chaiyasak (PM7SJ8C5QM)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Natthanon Chaiyasak (PM7SJ8C5QM)";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -2013,13 +2063,14 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "GeoMap/GeoMap-Prefix.pch";
-				INFOPLIST_FILE = "GeoMap/GeoMap-Info.plist";
+				GCC_PREFIX_HEADER = "GeoMap/iForest-Prefix.pch";
+				INFOPLIST_FILE = "GeoMap/iForest-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
-				VALID_ARCHS = "armv7 armv7s ARMv8/ARM64 arm64";
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = "armv7  arm64 armv7s ARMv8/ARM64";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -2032,13 +2083,14 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "GeoMap/GeoMap-Prefix.pch";
-				INFOPLIST_FILE = "GeoMap/GeoMap-Info.plist";
+				GCC_PREFIX_HEADER = "GeoMap/iForest-Prefix.pch";
+				INFOPLIST_FILE = "GeoMap/iForest-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
-				VALID_ARCHS = "armv7 armv7s ARMv8/ARM64 arm64";
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = "armv7  arm64 armv7s ARMv8/ARM64";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -2058,8 +2110,8 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "GeoMapTests/GeoMapTests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = "GeoMapTests/iForestTests-Info.plist";
+				PRODUCT_NAME = iForestTests;
 				TEST_HOST = "$(BUNDLE_LOADER)";
 				WRAPPER_EXTENSION = xctest;
 			};
@@ -2076,8 +2128,8 @@
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "GeoMap/GeoMap-Prefix.pch";
-				INFOPLIST_FILE = "GeoMapTests/GeoMapTests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = "GeoMapTests/iForestTests-Info.plist";
+				PRODUCT_NAME = iForestTests;
 				TEST_HOST = "$(BUNDLE_LOADER)";
 				WRAPPER_EXTENSION = xctest;
 			};
@@ -2086,7 +2138,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0473C00E18571F2A00FE6C9A /* Build configuration list for PBXProject "GeoMap" */ = {
+		0473C00E18571F2A00FE6C9A /* Build configuration list for PBXProject "iForest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0473C04618571F2A00FE6C9A /* Debug */,
@@ -2104,7 +2156,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0473C04B18571F2A00FE6C9A /* Build configuration list for PBXNativeTarget "GeoMapTests" */ = {
+		0473C04B18571F2A00FE6C9A /* Build configuration list for PBXNativeTarget "iForestTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0473C04C18571F2A00FE6C9A /* Debug */,

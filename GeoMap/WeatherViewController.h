@@ -24,6 +24,7 @@
 
 @property (strong, nonatomic) CLLocationManager *locationManager;
 @property (strong, nonatomic) CLLocation *userLocation;
+@property (strong, nonatomic) CLLocation *location;
 
 @property (strong, nonatomic) NSString *weatherGEOHASH;
 @property (strong, nonatomic) NSString *weatherLATITUDE;

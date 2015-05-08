@@ -205,8 +205,8 @@
   //  gesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(toggleMenu)];
   //  gesture.numberOfTapsRequired = 2;
     
-  //  leftSwipe = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(hide)];
-  //  leftSwipe.direction = UISwipeGestureRecognizerDirectionLeft;
+    leftSwipe = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(hide)];
+    leftSwipe.direction = UISwipeGestureRecognizerDirectionLeft;
     
   //  rightSwipe = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(show)];
   //  rightSwipe.direction = UISwipeGestureRecognizerDirectionRight;
@@ -214,7 +214,7 @@
     [sender.view addSubview:self];
   //  [sender.view addGestureRecognizer:gesture];
   //  [sender.view addGestureRecognizer:rightSwipe];
-  //  [sender.view addGestureRecognizer:leftSwipe];
+    [sender.view addGestureRecognizer:leftSwipe];
     
 }
 

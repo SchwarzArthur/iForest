@@ -225,8 +225,8 @@ static const CGFloat kCancelButtonShadowHeightRatio = 0.333f;
     [self setUpTableView];
 
     // Animate sliding in tableView and cancel button with keyframe animation for a nicer effect.
-    [UIView animateKeyframesWithDuration:kDefaultAnimationDuration delay:0 options:0 animations:^{
-        self.blurredBackgroundView.alpha = 1.0f;
+    [UIView animateKeyframesWithDuration:0.3 delay:0 options:0 animations:^{
+        self.blurredBackgroundView.alpha = 1.0f;//animateKeyframesWithDuration:kDefaultAnimationDuration
 
         [UIView addKeyframeWithRelativeStartTime:0.3f relativeDuration:0.7f animations:^{
             self.cancelButton.frame = CGRectMake(0,

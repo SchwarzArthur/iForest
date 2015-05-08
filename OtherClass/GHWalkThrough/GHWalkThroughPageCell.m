@@ -99,7 +99,7 @@
     self.descPositionY   = 160.0f;
     self.titleFont = [UIFont fontWithName:@"Avenir Next" size:16.0];
     self.titleColor = [UIColor whiteColor];
-    self.descFont = [UIFont fontWithName:@"Avenir Next" size:13.0];
+    self.descFont = [UIFont fontWithName:@"Avenir Next" size:12.0];
     self.descColor = [UIColor whiteColor];
 }
 
@@ -112,8 +112,28 @@
     UIView *pageView = [[UIView alloc] initWithFrame:self.contentView.bounds];
     
     if (self.titleImageView == nil) {
-        UIImageView *titleImageView = self.titleImage != nil ? [[UIImageView alloc] initWithImage:self.titleImage] : [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 250, 284)];//(0, 0, 160, 568)];
-        self.titleImageView = titleImageView;
+        
+        if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone){
+            
+            if ([[UIScreen mainScreen] respondsToSelector: @selector(scale)]) {
+                CGSize result = [[UIScreen mainScreen] bounds].size;
+                CGFloat scale = [UIScreen mainScreen].scale;
+                result = CGSizeMake(result.width * scale, result.height * scale);
+                
+                if(result.height == 960){
+                    NSLog(@"iphone 4, 4s retina resolution");
+                    
+                    UIImageView *titleImageView = self.titleImage != nil ? [[UIImageView alloc] initWithImage:self.titleImage] : [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 150, 184)];//(0, 0, 160, 568)];
+                    self.titleImageView = titleImageView;
+                }
+                if(result.height == 1136){
+                    NSLog(@"iphone 5 resolution");
+                
+                    UIImageView *titleImageView = self.titleImage != nil ? [[UIImageView alloc] initWithImage:self.titleImage] : [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 250, 284)];//(0, 0, 160, 568)];
+                    self.titleImageView = titleImageView;
+                }
+            }
+        }
     }
     [pageView addSubview:self.titleImageView];
     

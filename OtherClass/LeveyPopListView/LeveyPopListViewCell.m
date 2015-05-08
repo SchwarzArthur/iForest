@@ -17,9 +17,9 @@
         self.backgroundColor = [UIColor clearColor];
         self.textLabel.textColor = [UIColor whiteColor];
         if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone){
-            self.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:14];//[UIFont fontWithName:@"Thonburi" size:15.];//@"Thonburi" size:14.
+            self.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:13];//[UIFont fontWithName:@"Thonburi" size:15.];//@"Thonburi" size:14.
         } else {
-            self.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:17];
+            self.textLabel.font = [UIFont fontWithName:@"Avenir Next" size:16];
         }
     }
     return self;

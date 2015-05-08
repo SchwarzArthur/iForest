@@ -57,7 +57,7 @@
         UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 170.0f)];
         
         UILabel *developer = [[UILabel alloc] initWithFrame:CGRectMake(14, 10, ____tableView.frame.size.width - 28, 50)];
-        developer.text = @"Application Name : iForest\nVersion : 1.0\nDeveloper : Natthanon SchwarzArthur Chaiyasak";
+        developer.text = @"Application Name : iForest TH\nVersion : 1.1\nDeveloper : Natthanon SchwarzArthur Chaiyasak";
         developer.font = [UIFont fontWithName:@"Avenir Next" size:9];
         developer.backgroundColor = [UIColor clearColor];
         developer.textColor = [UIColor grayColor];
@@ -76,8 +76,8 @@
         [view addSubview:label];
         
         UILabel *warning = [[UILabel alloc] initWithFrame:CGRectMake(14, 105, ____tableView.frame.size.width - 28, 50)];
-        warning.text = @"◉  แผนที่และข้อมูลใดๆใน Application นี้ ใช้เพื่อการศึกษาเท่านั้น ไม่สามารถใช้อ้างอิงได้ในทางกฏหมาย";
-        warning.font = [UIFont fontWithName:@"Avenir Next" size:11];
+        warning.text = @"◉  แผนที่และข้อมูลใดๆใน Application นี้ ใช้เพื่อการศึกษาเท่านั้น \nไม่สามารถใช้อ้างอิงได้ในทางกฏหมาย";
+        warning.font = [UIFont fontWithName:@"Avenir Next" size:9];
         warning.backgroundColor = [UIColor clearColor];
         warning.textColor = kUIColor;
         warning.lineBreakMode = NSLineBreakByCharWrapping;
@@ -146,7 +146,7 @@
 
 - (void)setContent:(id)content
 {
-    self.photos = @[@"1", @"2", @"3", @"4"];
+    self.photos = @[@"2", @"1", @"3", @"4"];
 }
 
 - (void)reloadData
@@ -228,7 +228,7 @@
                 
             case 1:
                 [cell.textLabel setText:@"พื้นที่คงสภาพป่า ปี 2555 - 2556"];
-                [cell.detailTextLabel setText:@"ที่มา: ผลการแปลภาพถ่ายดาวเทียมไทยโชตและ Landsat 8 \nปี 2555-2556 โดยคณะวนศาสตร์ มหาวิทยาลัยเกษตรศาสตร์"];
+                [cell.detailTextLabel setText:@"ที่มา: กรมป่าไม้โดยคณะวนศาสตร์ มหาวิทยาลัยเกษตรศาสตร์ทำการแปลภาพถ่ายดาวเทียมไทยโชตและ Landsat 8 ปี 2555-2556"];
                 break;
     //    }
     //} else if (indexPath.section == 1) {
